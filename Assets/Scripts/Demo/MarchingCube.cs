@@ -278,20 +278,20 @@ public class MarchingCube : MonoBehaviour
         }
 
         //draw obj point
-        //foreach (MarchingCubeData.ObjPointData pointData in marchingCubeData.objPointDatas)
-        //{
-        //    Vector3 worldPos = pointData.pos;
-        //    Gizmos.color = pointData.isActive ? Color.red : Color.yellow;
-        //    Gizmos.DrawSphere(worldPos, 0.05f);
-        //}
+        foreach (MarchingCubeData.ObjPointData pointData in marchingCubeData.objPointDatas)
+        {
+            Vector3 worldPos = pointData.pos;
+            Gizmos.color = pointData.isActive ? Color.red : Color.yellow;
+            Gizmos.DrawSphere(worldPos, 0.05f);
+        }
 
         //draw module point
-        //Gizmos.color = Color.grey;
-        //foreach (MarchingCubeData.ModulePointData modulePointData in marchingCubeData.modulePointDatas)
-        //{
-        //    Vector3 worldPos = modulePointData.pos;
-        //    Gizmos.DrawSphere(worldPos, 0.05f);
-        //}
+        Gizmos.color = Color.grey;
+        foreach (MarchingCubeData.ModulePointData modulePointData in marchingCubeData.modulePointDatas)
+        {
+            Vector3 worldPos = modulePointData.pos;
+            Gizmos.DrawSphere(worldPos, 0.05f);
+        }
 
         if (isUpdate)
         {

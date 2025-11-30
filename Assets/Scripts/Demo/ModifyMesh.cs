@@ -16,6 +16,9 @@ public class ModifyMesh : MonoBehaviour
 
     TestMeshData testMeshData = new();
 
+    /// <summary>
+    /// 使用double插值算法把目标点的位置变换到mesh中
+    /// </summary>
     public void ApplyModifyMesh()
     {
         if (targetMesh == null)
@@ -38,15 +41,13 @@ public class ModifyMesh : MonoBehaviour
         {
             float x = vertices[i].x;
 
-            if (x >= 0)
             {
-                vertices[i].x = Mathf.Sqrt(x);
+                //vertices[i].x = Mathf.Sqrt(x);
+                vertices[i].y = vertices[i].y / 2;
             }
-            //else
-            //{
-            //    Debug.LogWarning($"Vertex {i} has a negative x value ({x}), skipping sqrt.");
-            //}
         }
+
+        Debug.Log("ready");
 
         mesh.vertices = vertices;
 
@@ -56,18 +57,7 @@ public class ModifyMesh : MonoBehaviour
 
     public void GenerateMesh()
     {
-        //TestMeshData testMeshData = new();
         testMeshData.GenerateVertices(polyRadius);
-
-        MapToMesh();
-    }
-
-    /// <summary>
-    /// 使用double插值算法把目标点的位置变换到mesh中
-    /// </summary>
-    public void MapToMesh()
-    {
-
     }
 
     /// <summary>
