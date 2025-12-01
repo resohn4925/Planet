@@ -10,9 +10,9 @@ public class ModifyMeshEditor : Editor
 
         ModifyMesh generator = (ModifyMesh)target;
 
-        if (GUILayout.Button("Generate Mesh"))
+        if (GUILayout.Button("GeneratePoint"))
         {
-            generator.GenerateMesh();
+            generator.GeneratePoint();
         }
 
         if (GUILayout.Button("Modify Mesh"))
