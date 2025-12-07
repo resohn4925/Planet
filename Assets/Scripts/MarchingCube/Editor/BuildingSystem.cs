@@ -190,6 +190,16 @@ public class BuildingSystem : EditorWindow
 
         if (marchingCube != null && marchingCube.marchingCubeData == null)
         {
+            DefaultSetting();//此处本应读取marchingcube中的数据，先用默认设置代替
+            rootObj = GameObject.Find("Root");
+            if (rootObj != null)
+            {
+                DestroyImmediate(rootObj);
+                rootObj = new GameObject("Root");
+                rootObj.transform.position = Vector3.zero;
+            }
+
+            SetData();//初始化
             marchingCube.Init();
         }
     }
