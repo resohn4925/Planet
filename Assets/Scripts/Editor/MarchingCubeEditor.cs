@@ -1,38 +1,41 @@
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(MarchingCube))]
-public class MarchingCubeEditor : Editor
+namespace TowerStacker
 {
-    public override void OnInspectorGUI()
+    [CustomEditor(typeof(MarchingCube))]
+    public class MarchingCubeEditor : Editor
     {
-        DrawDefaultInspector();
-
-        MarchingCube s = (MarchingCube)target;
-
-        if (GUILayout.Button("Init"))
+        public override void OnInspectorGUI()
         {
-            s.Init();
-        }
+            DrawDefaultInspector();
 
-        if (GUILayout.Button("LoadPrefab"))
-        {
-            s.LoadPrefab();
-        }
+            MarchingCube s = (MarchingCube)target;
 
-        if (GUILayout.Button("UpdateModules"))
-        {
-            s.UpdateChangedModules();
-        }
+            if (GUILayout.Button("Init"))
+            {
+                s.Init();
+            }
 
-        if (GUILayout.Button("Clear"))
-        {
-            s.Clear();
-        }
+            if (GUILayout.Button("LoadPrefab"))
+            {
+                s.LoadPrefab();
+            }
 
-        if (GUILayout.Button("OutPut"))
-        {
-            s.OutPut();
+            if (GUILayout.Button("UpdateModules"))
+            {
+                //s.UpdateChangedObj();
+            }
+
+            if (GUILayout.Button("Clear"))
+            {
+                s.Clear();
+            }
+
+            if (GUILayout.Button("OutPut"))
+            {
+                s.OutPut();
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7918418264126047886}
   - component: {fileID: 1147813411995753054}
   m_Layer: 0
-  m_Name: HintObj
+  m_Name: HintObjSlope
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -62,7 +62,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: b0b9db874700af746bd9618e4b32cfcc, type: 2}
+  - {fileID: 2100000, guid: 7a4db6ba74ed08245bd96e55b447424f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

@@ -5,7 +5,7 @@ using UnityEngine;
 public class ModifyMesh : MonoBehaviour
 {
     public GameObject targetMesh;
-    
+
     //变形四边形网格坐标
     [Header("0号点坐标")]
     public float posX0;
@@ -29,7 +29,7 @@ public class ModifyMesh : MonoBehaviour
     public float sphereRadius;
 
     /// <summary>
-    /// 使用double插值算法把目标点的位置变换到mesh中
+    /// 使用双线性插值算法把目标点的位置变换到mesh中
     /// </summary>
     public void ApplyModifyMesh()
     {
@@ -61,24 +61,39 @@ public class ModifyMesh : MonoBehaviour
         newMesh.tangents = originalMesh.tangents.Clone() as Vector4[];
 
         Vector3[] vertices = newMesh.vertices;
-        //原始网格坐标点
-        Vector3 originalA = new Vector3(0, 0, 0);
-        Vector3 originalB = new Vector3(0, 0, 1);
-        Vector3 originalC = new Vector3(1, 0, 1);
-        Vector3 originalD = new Vector3(1, 0, 0);
+
+        // 获取原始网格的包围盒来映射UV坐标
+        Bounds bounds = originalMesh.bounds;
+        float minX = bounds.min.x;
+        float maxX = bounds.max.x;
+        float minZ = bounds.min.z;
+        float maxZ = bounds.max.z;
+
+        //原始网格坐标点（包围盒的四个角）
+        Vector3 originalA = new Vector3(minX, 0, minZ);
+        Vector3 originalB = new Vector3(minX, 0, maxZ);
+        Vector3 originalC = new Vector3(maxX, 0, maxZ);
+        Vector3 originalD = new Vector3(maxX, 0, minZ);
+
         //目标网格坐标点
         Vector3 targetA = new Vector3(posX0, 0, posZ0);
         Vector3 targetB = new Vector3(posX1, 0, posZ1);
         Vector3 targetC = new Vector3(posX2, 0, posZ2);
         Vector3 targetD = new Vector3(posX3, 0, posZ3);
+
         for (int i = 0; i < vertices.Length; i++)
         {
-            //double lerp算法
-            vertices[i] = UniversalBilinearInterpolation(
-                vertices[i],
-                originalA, originalB, originalC, originalD,
-                targetA, targetB, targetC, targetD
-            );
+            // 计算顶点在包围盒中的归一化坐标
+            float u = Mathf.InverseLerp(minX, maxX, vertices[i].x);
+            float v = Mathf.InverseLerp(minZ, maxZ, vertices[i].z);
+
+            // 使用双线性插值计算新位置
+            Vector3 interpolatedPosition = BilinearInterpolation(u, v, targetA, targetB, targetC, targetD);
+
+            // 保持原始Y坐标不变
+            interpolatedPosition.y = vertices[i].y;
+
+            vertices[i] = interpolatedPosition;
         }
 
         newMesh.vertices = vertices;
@@ -91,50 +106,27 @@ public class ModifyMesh : MonoBehaviour
         meshFilter.sharedMesh = newMesh;
     }
 
-    private Vector3 UniversalBilinearInterpolation(
-        Vector3 originalPoint,
-        Vector3 origA, Vector3 origB, Vector3 origC, Vector3 origD,
-        Vector3 targetA, Vector3 targetB, Vector3 targetC, Vector3 targetD)
+    /// <summary>
+    /// 双线性插值算法
+    /// </summary>
+    private Vector3 BilinearInterpolation(float u, float v, Vector3 A, Vector3 B, Vector3 C, Vector3 D)
     {
-        // 计算点在原始正方形中的参数化坐标 (u, v)
-        // 使用简单的投影方法计算u和v
+        // 确保uv在[0,1]范围内
+        u = Mathf.Clamp01(u);
+        v = Mathf.Clamp01(v);
 
-        // 计算原始正方形的宽度和高度
-        float origWidth = Vector3.Distance(origA, origD);
-        float origHeight = Vector3.Distance(origA, origB);
-
-        // 计算原始正方形的中心
-        Vector3 origCenter = (origA + origB + origC + origD) / 4f;
-
-        // 计算原始正方形的主方向
-        Vector3 origRight = (origD - origA).normalized;
-        Vector3 origUp = (origB - origA).normalized;
-
-        // 计算点在原始方向上的投影
-        Vector3 fromOrigCenter = originalPoint - origCenter;
-        float u = Vector3.Dot(fromOrigCenter, origRight) / origWidth;
-        float v = Vector3.Dot(fromOrigCenter, origUp) / origHeight;
-
-        // 调整u,v到正确的范围（考虑原始正方形的实际位置）
-        u += 0.5f; // 因为中心在(0.5,0.5)，所以需要偏移
-        v += 0.5f;
-
-        // 使用双线性插值计算目标位置
-        Vector3 result =
-            (1 - u) * (1 - v) * targetA +
-            (1 - u) * v * targetB +
-            u * (1 - v) * targetD +
-            u * v * targetC;
-
-        // 保持原始Y坐标不变（高度）
-        result.y = originalPoint.y;
+        // 双线性插值公式
+        Vector3 result = (1 - u) * (1 - v) * A +
+                        (1 - u) * v * B +
+                        u * (1 - v) * D +
+                        u * v * C;
 
         return result;
     }
 
-public void GeneratePoint()
+    public void GeneratePoint()
     {
-        testMeshData = new();
+        testMeshData = new List<Vector3>();
         Vector3 newPos = new Vector3(posX0, 0, posZ0);
         testMeshData.Add(newPos);
         newPos = new Vector3(posX1, 0, posZ1);
