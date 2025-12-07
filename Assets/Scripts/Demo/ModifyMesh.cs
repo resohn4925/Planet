@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class ModifyMesh : MonoBehaviour
 {
-    public GameObject targetMesh;
+    public GameObject targetObj;
+    public Material defaultMat;
 
     //变形四边形网格坐标
     [Header("0号点坐标")]
@@ -28,23 +29,31 @@ public class ModifyMesh : MonoBehaviour
     [Header("顶点小球半径")]
     public float sphereRadius;
 
+    private GameObject transformedObj;
+
     /// <summary>
     /// 使用双线性插值算法把目标点的位置变换到mesh中
     /// </summary>
     public void ApplyModifyMesh()
     {
-        if (targetMesh == null)
+        if (targetObj == null)
         {
             Debug.LogError("target mesh is null");
             return;
         }
 
-        MeshFilter meshFilter = targetMesh.GetComponent<MeshFilter>();
+        MeshFilter meshFilter = targetObj.GetComponent<MeshFilter>();
         if (meshFilter == null || meshFilter.sharedMesh == null)
         {
             Debug.LogError("no mesh found in the target mesh.");
             return;
         }
+
+        //记录原始物件transform
+        Quaternion originalRotation = targetObj.transform.rotation;
+        Vector3 originalScale = targetObj.transform.localScale;
+        Debug.Log($"原始旋转: {originalRotation.eulerAngles}");
+        Debug.Log($"原始缩放: {originalScale}");
 
         // 获取原始网格
         Mesh originalMesh = meshFilter.sharedMesh;
@@ -60,16 +69,47 @@ public class ModifyMesh : MonoBehaviour
         newMesh.colors = originalMesh.colors.Clone() as Color[];
         newMesh.tangents = originalMesh.tangents.Clone() as Vector4[];
 
+        //transformedObj
         Vector3[] vertices = newMesh.vertices;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            vertices[i].x *= originalScale.x;
+            vertices[i].y *= originalScale.y;
+            vertices[i].z *= originalScale.z;
+
+            vertices[i] = originalRotation * vertices[i];
+        }
+        newMesh.vertices = vertices;
+
+        if (transformedObj != null)
+        {
+            DestroyImmediate(transformedObj);
+        }
+        transformedObj = new GameObject("transformedObj");
+
+        transformedObj.transform.localScale = new Vector3(1, 1, 1);
+        MeshFilter transformedMeshFilter = transformedObj.AddComponent<MeshFilter>();
+        newMesh.name = "Mesh";
+        transformedMeshFilter.sharedMesh = newMesh;
+        MeshRenderer meshRenderer = transformedObj.AddComponent<MeshRenderer>();
+        meshRenderer.material = defaultMat;
 
         // 获取原始网格的包围盒来映射UV坐标
-        Bounds bounds = originalMesh.bounds;
-        float minX = bounds.min.x;
-        float maxX = bounds.max.x;
-        float minZ = bounds.min.z;
-        float maxZ = bounds.max.z;
+        Bounds bounds = newMesh.bounds;
+        //float minX = bounds.min.x * originalScale.x;
+        //float maxX = bounds.max.x * originalScale.x;
+        //float minZ = bounds.min.z * originalScale.z;
+        //float maxZ = bounds.max.z * originalScale.z;
 
-        //原始网格坐标点（包围盒的四个角）
+        float minX = -1f;
+        float maxX = 1f;
+        float minZ = -1f;
+        float maxZ = 1f;
+
+        //计算原始网格对应模块Cube的坐标点来映射UV坐标
+
+
+        //原始网格坐标点
         Vector3 originalA = new Vector3(minX, 0, minZ);
         Vector3 originalB = new Vector3(minX, 0, maxZ);
         Vector3 originalC = new Vector3(maxX, 0, maxZ);
@@ -87,11 +127,11 @@ public class ModifyMesh : MonoBehaviour
             float u = Mathf.InverseLerp(minX, maxX, vertices[i].x);
             float v = Mathf.InverseLerp(minZ, maxZ, vertices[i].z);
 
-            // 使用双线性插值计算新位置
+            // 使用double lerp计算新位置
             Vector3 interpolatedPosition = BilinearInterpolation(u, v, targetA, targetB, targetC, targetD);
 
-            // 保持原始Y坐标不变
-            interpolatedPosition.y = vertices[i].y;
+            // y坐标不变
+            interpolatedPosition.y = vertices[i].y * 10f;
 
             vertices[i] = interpolatedPosition;
         }
@@ -103,7 +143,7 @@ public class ModifyMesh : MonoBehaviour
         newMesh.name = "TestMesh";
 
         // 新网格赋给目标物体
-        meshFilter.sharedMesh = newMesh;
+        transformedMeshFilter.sharedMesh = newMesh;
     }
 
     /// <summary>
@@ -111,11 +151,11 @@ public class ModifyMesh : MonoBehaviour
     /// </summary>
     private Vector3 BilinearInterpolation(float u, float v, Vector3 A, Vector3 B, Vector3 C, Vector3 D)
     {
-        // 确保uv在[0,1]范围内
+        // uv坐标归一化
         u = Mathf.Clamp01(u);
         v = Mathf.Clamp01(v);
 
-        // 双线性插值公式
+        // double lerp
         Vector3 result = (1 - u) * (1 - v) * A +
                         (1 - u) * v * B +
                         u * (1 - v) * D +
