@@ -100,9 +100,9 @@ public class MarchingCube : MonoBehaviour
             moduleInstances = new List<GameObject>();
         }
 
-        if (moduleInstances == null)
+        if (slopeInstances == null)
         {
-            moduleInstances = new List<GameObject>();
+            slopeInstances = new List<GameObject>();
         }
     }
 
