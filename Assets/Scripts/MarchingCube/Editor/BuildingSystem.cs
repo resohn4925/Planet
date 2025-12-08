@@ -175,6 +175,11 @@ public class BuildingSystem : EditorWindow
             }
         }
 
+        if (GUILayout.Button("网格变形", GUILayout.Height(30)))
+        {
+            marchingCube.ApplyModifyMesh();
+        }
+
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox("Left Click: Place Object\nRight Click: Exit Placement Mode", MessageType.Info);
     }

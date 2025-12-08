@@ -1,3 +1,4 @@
+using QFramework;
 using System.Collections.Generic;
 using Unity.Burst.Intrinsics;
 using UnityEditor;
@@ -33,6 +34,11 @@ public class MarchingCube : MonoBehaviour
     [Header("地形数据")]
     public TerrainDataSO terrainDataSO;
 
+    //MeshModify
+    public Material defaultMat;
+
+    private List<Vector3> targetMeshData;
+
     [System.Serializable]
     public enum EditMode
     {
@@ -46,6 +52,7 @@ public class MarchingCube : MonoBehaviour
     private List<GameObject> moduleInstances;
 
     public ObjPointData[,,] objPointArray;
+
     public ModulePointData[,,] modulePointArray;
 
     public void Init()
@@ -489,6 +496,195 @@ public class MarchingCube : MonoBehaviour
     }
     #endregion
 
+    #region MeshModify
+    /// <summary>
+    /// 使用双线性插值算法把目标点的位置变换到mesh中
+    /// </summary>
+    public void ApplyModifyMesh()
+    {
+        if (moduleInstances == null || moduleInstances.Count == 0)
+        {
+            Debug.LogWarning("无模块实例");
+            return;
+        }
+
+        for (int i = 0; i < marchingCubeData.modulePointDatas.Count; i++)
+        {
+            if (moduleInstances[i] == null) continue;
+
+            var modulePoint = marchingCubeData.modulePointDatas[i];
+
+            targetMeshData = new List<Vector3>();
+
+            int moduleIndexX = marchingCubeData.modulePointDatas[i].xIndex;
+            int moduleIndexY = marchingCubeData.modulePointDatas[i].yIndex;
+            int moduleIndexZ = marchingCubeData.modulePointDatas[i].zIndex;
+            Debug.Log($"{moduleIndexX},{moduleIndexY},{moduleIndexZ}对应模块为{moduleInstances[i].name}");
+
+            if (moduleIndexX - 1 < 0 || moduleIndexX > marchingCubeData.columns - 1 || moduleIndexZ - 1 < 0 || moduleIndexZ > marchingCubeData.rows - 1 || moduleIndexY < 0 || moduleIndexY > marchingCubeData.layers - 1) continue;
+            targetMeshData.Add(marchingCubeData.objPointArray[moduleIndexX - 1, moduleIndexZ - 1, moduleIndexY].pos);
+            targetMeshData.Add(marchingCubeData.objPointArray[moduleIndexX - 1, moduleIndexZ, moduleIndexY].pos);
+            targetMeshData.Add(marchingCubeData.objPointArray[moduleIndexX, moduleIndexZ, moduleIndexY].pos);
+            targetMeshData.Add(marchingCubeData.objPointArray[moduleIndexX, moduleIndexZ - 1, moduleIndexY].pos);
+
+            CreateTransformedMesh(moduleInstances[i], moduleInstances[i].name);
+        }
+    }
+
+    public void CreateTransformedMesh(GameObject targetObj, string moduleName)
+    {
+        if (targetObj == null)
+        {
+            Debug.LogError("target mesh is null");
+            return;
+        }
+
+        MeshFilter meshFilter = targetObj.GetComponent<MeshFilter>();
+        MeshRenderer meshRenderer = targetObj.GetComponent<MeshRenderer>();
+
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+        {
+            Debug.LogError("no mesh found in the target mesh.");
+            return;
+        }
+
+        // 记录原始物件transform
+        Quaternion originalRotation = targetObj.transform.rotation;
+        Vector3 originalScale = targetObj.transform.localScale;
+        Vector3 originalPosition = targetObj.transform.position;
+
+        // 检测是否是镜像
+        bool isMirrored = originalScale.x < 0;
+
+        // 获取原始网格
+        Mesh originalMesh = meshFilter.sharedMesh;
+
+        // 创建网格实例
+        Mesh newMesh = new Mesh();
+
+        //复制基础顶点数据
+        newMesh.vertices = originalMesh.vertices.Clone() as Vector3[];
+        newMesh.normals = originalMesh.normals.Clone() as Vector3[];
+        newMesh.uv = originalMesh.uv.Clone() as Vector2[];
+        newMesh.colors = originalMesh.colors.Clone() as Color[];
+        newMesh.tangents = originalMesh.tangents.Clone() as Vector4[];
+
+        //复制所有子网格信息
+        int subMeshCount = originalMesh.subMeshCount;
+        newMesh.subMeshCount = subMeshCount;
+
+        for (int i = 0; i < subMeshCount; i++)
+        {
+            int[] triangles = originalMesh.GetTriangles(i);
+
+            // 如果镜像，反转三角形顶点顺序
+            if (isMirrored)
+            {
+                for (int j = 0; j < triangles.Length; j += 3)
+                {
+                    int temp = triangles[j];
+                    triangles[j] = triangles[j + 2];
+                    triangles[j + 2] = temp;
+                }
+            }
+
+            newMesh.SetTriangles(triangles, i);
+        }
+
+        // 应用原始变换到顶点
+        Vector3[] vertices = newMesh.vertices;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            vertices[i].x *= originalScale.x;
+            vertices[i].y *= originalScale.y;
+            vertices[i].z *= originalScale.z;
+
+            vertices[i] = originalRotation * vertices[i];
+        }
+        newMesh.vertices = vertices;
+
+        // 如果镜像，反转法线方向
+        if (isMirrored)
+        {
+            Vector3[] normals = newMesh.normals;
+            for (int i = 0; i < normals.Length; i++)
+            {
+                // 反转X轴的法线分量
+                normals[i].x = -normals[i].x;
+            }
+            newMesh.normals = normals;
+        }
+
+        // 重置目标物体的变换
+        targetObj.transform.localScale = Vector3.one;
+        Vector3 pos = new Vector3(0, targetObj.transform.position.y, 0);
+        targetObj.transform.position = pos;
+        targetObj.transform.rotation = Quaternion.identity;
+        newMesh.name = "Transformed_" + moduleName;
+
+        float minX = -spacing / 2;
+        float maxX = spacing / 2;
+        float minZ = -spacing / 2;
+        float maxZ = spacing / 2;
+
+        float averageY = 0f;
+        for (int i = 0; i < targetMeshData.Count; i++)
+        {
+            averageY += targetMeshData[i].y;
+        }
+        averageY /= targetMeshData.Count;
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            float u = Mathf.InverseLerp(minX, maxX, vertices[i].x);
+            float v = Mathf.InverseLerp(minZ, maxZ, vertices[i].z);
+
+            Vector3 interpolatedPosition = BilinearInterpolation(u, v,
+                targetMeshData[0], targetMeshData[1],
+                targetMeshData[2], targetMeshData[3]);
+
+            float heightOffset = vertices[i].y - averageY;
+            interpolatedPosition.y += heightOffset;
+
+            vertices[i] = interpolatedPosition;
+        }
+
+        newMesh.vertices = vertices;
+
+        // 重新计算法线
+        newMesh.RecalculateNormals();
+        newMesh.RecalculateBounds();
+        newMesh.RecalculateTangents();
+
+        meshFilter.sharedMesh = newMesh;
+
+        // 复制材质数组
+        if (meshRenderer != null && meshRenderer.sharedMaterials != null)
+        {
+            Material[] originalMaterials = meshRenderer.sharedMaterials;
+            meshRenderer.sharedMaterials = originalMaterials;
+        }
+    }
+
+    /// <summary>
+    /// 双线性插值算法
+    /// </summary>
+    private Vector3 BilinearInterpolation(float u, float v, Vector3 A, Vector3 B, Vector3 C, Vector3 D)
+    {
+        // uv坐标归一化
+        u = Mathf.Clamp01(u);
+        v = Mathf.Clamp01(v);
+
+        // double lerp
+        Vector3 result = (1 - u) * (1 - v) * A +
+                        (1 - u) * v * B +
+                        u * (1 - v) * D +
+                        u * v * C;
+
+        return result;
+    }
+    #endregion
+
     public void OutPut()
     {
         m.Output();
@@ -545,12 +741,14 @@ public class MarchingCube : MonoBehaviour
             objPointArray = new ObjPointData[rows, columns, layers];
             objPointDatas.Clear();
 
+            //网格不变形的情况
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < columns; j++)
                 {
                     for (int k = 0; k < layers; k++)
                     {
+                        continue;
                         ObjPointData objPointData = new();
 
                         objPointData.xIndex = i;
@@ -569,9 +767,44 @@ public class MarchingCube : MonoBehaviour
                     }
                 }
             }
-        }
-        public void GetPointData(int xIndex, int zIndex)
-        {
+
+            //网格变形的情况
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < columns; j++)
+                {
+                    float randomOffsetX = 0f;
+                    float randomOffsetZ = 0f;
+
+                    // 只在非边缘位置生成随机偏移
+                    if (i != 0 && i != rows - 1 && j != 0 && j != columns - 1)
+                    {
+                        randomOffsetX = Random.Range(-0.15f, 0.15f) * spacing;
+                        randomOffsetZ = Random.Range(-0.15f, 0.15f) * spacing;
+                    }
+
+                    for (int k = 0; k < layers; k++)
+                    {
+                        ObjPointData objPointData = new();
+
+                        objPointData.xIndex = i;
+                        objPointData.zIndex = j;
+                        objPointData.yIndex = k;
+
+                        Vector3 p = new Vector3();
+                        p.x = i * spacing + 1f / 2 * spacing + randomOffsetX;
+                        p.z = j * spacing + 1f / 2 * spacing + randomOffsetZ;
+                        p.y = k * spacing + 1f / 2 * spacing;
+
+                        objPointData.pos = p;
+                        objPointData.isSlope = false;
+                        objPointData.slopeRotation = 0f;
+
+                        objPointArray[i, j, k] = objPointData;
+                        objPointDatas.Add(objPointData);
+                    }
+                }
+            }
         }
 
         public List<ModulePointData> modulePointDatas = new List<ModulePointData>();
