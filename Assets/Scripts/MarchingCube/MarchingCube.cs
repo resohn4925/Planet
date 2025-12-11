@@ -519,7 +519,7 @@ public class MarchingCube : MonoBehaviour
             int moduleIndexX = marchingCubeData.modulePointDatas[i].xIndex;
             int moduleIndexY = marchingCubeData.modulePointDatas[i].yIndex;
             int moduleIndexZ = marchingCubeData.modulePointDatas[i].zIndex;
-            Debug.Log($"{moduleIndexX},{moduleIndexY},{moduleIndexZ}对应模块为{moduleInstances[i].name}");
+            //Debug.Log($"{moduleIndexX},{moduleIndexY},{moduleIndexZ}对应模块为{moduleInstances[i].name}");
 
             if (moduleIndexX - 1 < 0 || moduleIndexX > marchingCubeData.columns - 1 || moduleIndexZ - 1 < 0 || moduleIndexZ > marchingCubeData.rows - 1 || moduleIndexY < 0 || moduleIndexY > marchingCubeData.layers - 1) continue;
             targetMeshData.Add(marchingCubeData.objPointArray[moduleIndexX - 1, moduleIndexZ - 1, moduleIndexY].pos);
