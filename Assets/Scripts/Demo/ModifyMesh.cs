@@ -96,15 +96,11 @@ public class ModifyMesh : MonoBehaviour
 
         // 获取原始网格的包围盒来映射UV坐标
         Bounds bounds = newMesh.bounds;
-        //float minX = bounds.min.x * originalScale.x;
-        //float maxX = bounds.max.x * originalScale.x;
-        //float minZ = bounds.min.z * originalScale.z;
-        //float maxZ = bounds.max.z * originalScale.z;
 
-        float minX = -1f;
-        float maxX = 1f;
-        float minZ = -1f;
-        float maxZ = 1f;
+        float minX = -2.5f;
+        float maxX = 2.5f;
+        float minZ = -2.5f;
+        float maxZ = 2.5f;
 
         //计算原始网格对应模块Cube的坐标点来映射UV坐标
 

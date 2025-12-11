@@ -1,99 +1,242 @@
-using System.Collections;
-using System.Collections.Generic;
+                     using System.Collections.Generic;
 using UnityEngine;
 
 public class ModifyMesh3d : MonoBehaviour
 {
     [Header("目标模块")]
     public GameObject targetModule;
+    public List<GameObject> moduleList = new List<GameObject>();
     public Material defaultMat;
+
+    [Header("固定边界设置")]
+    public float fixedBoundSize = 5f;//默认等于模块立方体长度
 
     [Header("球体设置")]
     public float sphereRadius = 10f;
     public float moduleHeight = 2f;
 
     [Header("底部四边形顶点（球面坐标）")]
-    [Range(0, 360)] public float theta0 = 0f;
-    [Range(-90, 90)] public float phi0 = 0f;
+    [Range(0, 360)] public float theta0 = 45f;
+    [Range(-90, 90)] public float phi0 = -2.5f;
 
-    [Range(0, 360)] public float theta1 = 90f;
-    [Range(-90, 90)] public float phi1 = 0f;
+    [Range(0, 360)] public float theta1 = 45f;
+    [Range(-90, 90)] public float phi1 = 2.5f;
 
-    [Range(0, 360)] public float theta2 = 180f;
-    [Range(-90, 90)] public float phi2 = 0f;
+    [Range(0, 360)] public float theta2 = 50f;
+    [Range(-90, 90)] public float phi2 = 2.5f;
 
-    [Range(0, 360)] public float theta3 = 270f;
-    [Range(-90, 90)] public float phi3 = 0f;
+    [Range(0, 360)] public float theta3 = 50f;
+    [Range(-90, 90)] public float phi3 = -2.5f;
 
     [Header("几何可视化")]
     public float pointRadius = 0.2f;
-    public bool drawWireframe = true;
-    public bool drawNormals = true;
+    public bool showFixedBounds = true;
 
+    // 存储生成的控制点
     private List<Vector3> bottomVertices = new List<Vector3>();
     private List<Vector3> topVertices = new List<Vector3>();
-    private List<Vector3> allVertices = new List<Vector3>();
     private List<Vector3> bottomNormals = new List<Vector3>();
-    private List<Vector3> topNormals = new List<Vector3>();
 
     private GameObject deformedModule;
 
-    List<Vector3> testMeshData = new();
+    private List<ModuleData> moduleDatas = new();
 
-    public void GeneratePoint()
+    /// <summary>
+    /// 生成变形模块
+    /// </summary>
+    public void GenerateModule()
     {
-        GenerateSphereQuad();
-        ExtrudeToHexahedron();
+        GenerateSphereQuad(theta0, phi0, theta1, phi1, theta2, phi2, theta3, phi3, bottomVertices, bottomNormals);
+        ExtrudeToHexahedron(bottomVertices, bottomNormals, topVertices);
+        //DeformModule();
     }
 
     /// <summary>
-    ///转到直角坐标空间
+    /// 生成一组测试变形模块
     /// </summary>
-    public void GenerateSphereQuad()
+    public void GenerateTestModule()
     {
-        bottomVertices.Clear();
+        GenerateTestQuad();
+        for (int i = 0; i < 4; i++)
+        {
+            Debug.Log(moduleDatas[0].bottomVertices[i]);
+        }
+        ExtrudeToHexahedron(moduleDatas[0].bottomVertices, moduleDatas[0].topVertices, moduleDatas[0].bottomNormals);
+        for (int i = 0; i < 4; i++)
+        {
+            Debug.Log(moduleDatas[0].bottomVertices[i]);
+        }
+        DeformModule();
+    }
 
-        Vector3 p0 = SphericalToCartesian(theta0, phi0, sphereRadius);
-        Vector3 p1 = SphericalToCartesian(theta1, phi1, sphereRadius);
-        Vector3 p2 = SphericalToCartesian(theta2, phi2, sphereRadius);
-        Vector3 p3 = SphericalToCartesian(theta3, phi3, sphereRadius);
+    private void GenerateTestQuad()
+    {
+        moduleDatas.Clear();
+        for(int i = 0; i < 1; i++)
+        {
+            ModuleData moduleData = new();
+            moduleDatas.Add(moduleData);
+        }
 
-        bottomVertices.Add(p0);
-        bottomVertices.Add(p1);
-        bottomVertices.Add(p2);
-        bottomVertices.Add(p3);
-
-        //计算法线
-        bottomNormals.Clear();
-        bottomNormals.Add(p0.normalized);
-        bottomNormals.Add(p1.normalized);
-        bottomNormals.Add(p2.normalized);
-        bottomNormals.Add(p3.normalized);
+        GenerateSphereQuad(0, -10, 0, 10, 20, 10, 20, -10, moduleDatas[0].bottomVertices, moduleDatas[0].bottomNormals);
+        for (int i = 0; i < 4; i++)
+        {
+            Debug.Log(moduleDatas[0].bottomVertices[i]);
+        }
     }
 
     /// <summary>
-    /// 延伸顶点
+    /// 生成底部点
     /// </summary>
-    void ExtrudeToHexahedron()
+    public void GenerateSphereQuad(float vt0, float vp0, float vt1, float vp1, float vt2, float vp2, float vt3, float vp3, List<Vector3> bvs, List<Vector3> bNormals)
+    {
+        bvs.Clear();
+        bNormals.Clear();
+
+        AddSpherePoint(vt1, vp0, bvs, bNormals);
+        AddSpherePoint(vt1, vp1, bvs, bNormals);
+        AddSpherePoint(vt2, vp2, bvs, bNormals);
+        AddSpherePoint(vt3, vp3, bvs, bNormals);
+    }
+
+    void AddSpherePoint(float theta, float phi, List<Vector3> bvs, List<Vector3> bNormals)
+    {
+        Vector3 p = SphericalToCartesian(theta, phi, sphereRadius);
+        bvs.Add(p);
+        bNormals.Add(p.normalized);
+    }
+
+    /// <summary>
+    /// 生成顶部点
+    /// </summary>
+    void ExtrudeToHexahedron(List<Vector3> bPos, List<Vector3>tPos, List<Vector3> bNormal)
     {
         topVertices.Clear();
-        allVertices.Clear();
-        topNormals.Clear();
 
         for (int i = 0; i < 4; i++)
         {
-            Vector3 bottomPos = bottomVertices[i];
-            Vector3 normal = bottomNormals[i];
+            Vector3 bottomPos = bPos[i];
+            Vector3 normal = bNormal[i];
 
             Vector3 topPos = bottomPos + normal * moduleHeight;
-            topVertices.Add(topPos);
-            topNormals.Add(normal);
+            tPos.Add(topPos);
         }
-
-        allVertices.AddRange(bottomVertices);
-        allVertices.AddRange(topVertices);
     }
 
+    /// <summary>
+    /// 将模块映射到变形六面体
+    /// </summary>
+    void DeformModule()
+    {
+        if (targetModule == null)
+        {
+            Debug.LogError("目标模块为空");
+            return;
+        }
+
+        MeshFilter sourceFilter = targetModule.GetComponent<MeshFilter>();
+        if (sourceFilter == null || sourceFilter.sharedMesh == null)
+        {
+            Debug.LogError("目标模块没有网格");
+            return;
+        }
+
+        Mesh originalMesh = sourceFilter.sharedMesh;
+        Vector3[] originalVerts = originalMesh.vertices;
+
+        Quaternion sourceRot = targetModule.transform.localRotation;
+        Vector3 sourceScale = targetModule.transform.localScale;
+        Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
+
+        Vector3[] bakedVerts = new Vector3[originalVerts.Length];
+        for (int i = 0; i < originalVerts.Length; i++)
+        {
+            bakedVerts[i] = bakeMatrix.MultiplyPoint3x4(originalVerts[i]);
+        }
+
+        Vector3[] newVerts = new Vector3[bakedVerts.Length];
+
+        Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
+        Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
+
+        for (int i = 0; i < bakedVerts.Length; i++)
+        {
+            Vector3 normalized = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
+
+            newVerts[i] = TrilinearInterpolation(normalized.x, normalized.z, normalized.y);
+        }
+
+        Mesh deformedMesh = new Mesh();
+        deformedMesh.name = "DeformedInstance_FixedBounds";
+        deformedMesh.vertices = newVerts;
+        deformedMesh.uv = originalMesh.uv;
+        deformedMesh.triangles = originalMesh.triangles;
+
+        deformedMesh.RecalculateNormals();
+        deformedMesh.RecalculateTangents();
+        deformedMesh.RecalculateBounds();
+
+        if (deformedModule != null)
+        {
+            DestroyImmediate(deformedModule);
+        }
+
+        deformedModule = new GameObject("DeformedModule_FixedBounds");
+        deformedModule.transform.position = transform.position;
+        deformedModule.transform.rotation = Quaternion.identity;
+        deformedModule.transform.localScale = Vector3.one;
+
+        MeshFilter newFilter = deformedModule.AddComponent<MeshFilter>();
+        newFilter.sharedMesh = deformedMesh;
+
+        MeshRenderer newRenderer = deformedModule.AddComponent<MeshRenderer>();
+        newRenderer.material = defaultMat != null ? defaultMat : new Material(Shader.Find("Standard"));
+
+        Debug.Log($"模块变形完成 - 固定边界: {fixedBoundSize}, 顶点数: {newVerts.Length}");
+    }
+
+    /// <summary>
+    /// 使用固定边界归一化（就像MarchingCube中的固定间距）
+    /// </summary>
+    Vector3 NormalizeToFixedBounds(Vector3 point, Vector3 min, Vector3 max)
+    {
+        float x = Mathf.InverseLerp(min.x, max.x, point.x);
+        float y = Mathf.InverseLerp(min.y, max.y, point.y);
+        float z = Mathf.InverseLerp(min.z, max.z, point.z);
+
+        return new Vector3(x, y, z);
+    }
+
+    /// <summary>
+    /// 三线性插值
+    /// </summary>
+    Vector3 TrilinearInterpolation(float u, float v, float w)
+    {
+        Vector3 bottomPos = BilinearInterpolation(u, v,
+            bottomVertices[0], bottomVertices[1],
+            bottomVertices[2], bottomVertices[3]);
+
+        Vector3 topPos = BilinearInterpolation(u, v,
+            topVertices[0], topVertices[1],
+            topVertices[2], topVertices[3]);
+
+        return Vector3.Lerp(bottomPos, topPos, w);
+    }
+
+    /// <summary>
+    /// 双线性插值公式
+    /// </summary>
+    Vector3 BilinearInterpolation(float u, float v, Vector3 p00, Vector3 p01, Vector3 p11, Vector3 p10)
+    {
+        return (1 - u) * (1 - v) * p00 +
+               (1 - u) * v * p01 +
+               u * v * p11 +
+               u * (1 - v) * p10;
+    }
+
+    /// <summary>
+    /// 球面坐标转直角坐标
+    /// </summary>
     private Vector3 SphericalToCartesian(float theta, float phi, float radius)
     {
         float thetaRad = theta * Mathf.Deg2Rad;
@@ -101,160 +244,85 @@ public class ModifyMesh3d : MonoBehaviour
         float x = radius * Mathf.Cos(phiRad) * Mathf.Cos(thetaRad);
         float y = radius * Mathf.Sin(phiRad);
         float z = radius * Mathf.Cos(phiRad) * Mathf.Sin(thetaRad);
-        
         return new Vector3(x, y, z);
     }
 
-    //private GameObject deformedModule;
-
-    ///// <summary>
-    ///// 使用双线性插值算法把目标点的位置变换到mesh中
-    ///// </summary>
-    //public void ApplyModifyMesh()
-    //{
-    //    if (targetObj == null)
-    //    {
-    //        Debug.LogError("target mesh is null");
-    //        return;
-    //    }
-
-    //    MeshFilter meshFilter = targetObj.GetComponent<MeshFilter>();
-    //    if (meshFilter == null || meshFilter.sharedMesh == null)
-    //    {
-    //        Debug.LogError("no mesh found in the target mesh.");
-    //        return;
-    //    }
-
-    //    //记录原始物件transform
-    //    Quaternion originalRotation = targetObj.transform.rotation;
-    //    Vector3 originalScale = targetObj.transform.localScale;
-    //    Debug.Log($"原始旋转: {originalRotation.eulerAngles}");
-    //    Debug.Log($"原始缩放: {originalScale}");
-
-    //    // 获取原始网格
-    //    Mesh originalMesh = meshFilter.sharedMesh;
-
-    //    // 创建网格实例
-    //    Mesh newMesh = new Mesh();
-
-    //    // 复制原始网格数据
-    //    newMesh.vertices = originalMesh.vertices.Clone() as Vector3[];
-    //    newMesh.triangles = originalMesh.triangles.Clone() as int[];
-    //    newMesh.normals = originalMesh.normals.Clone() as Vector3[];
-    //    newMesh.uv = originalMesh.uv.Clone() as Vector2[];
-    //    newMesh.colors = originalMesh.colors.Clone() as Color[];
-    //    newMesh.tangents = originalMesh.tangents.Clone() as Vector4[];
-
-    //    //transformedObj
-    //    Vector3[] vertices = newMesh.vertices;
-    //    for (int i = 0; i < vertices.Length; i++)
-    //    {
-    //        vertices[i].x *= originalScale.x;
-    //        vertices[i].y *= originalScale.y;
-    //        vertices[i].z *= originalScale.z;
-
-    //        vertices[i] = originalRotation * vertices[i];
-    //    }
-    //    newMesh.vertices = vertices;
-
-    //    if (transformedObj != null)
-    //    {
-    //        DestroyImmediate(transformedObj);
-    //    }
-    //    transformedObj = new GameObject("transformedObj");
-
-    //    transformedObj.transform.localScale = new Vector3(1, 1, 1);
-    //    MeshFilter transformedMeshFilter = transformedObj.AddComponent<MeshFilter>();
-    //    newMesh.name = "Mesh";
-    //    transformedMeshFilter.sharedMesh = newMesh;
-    //    MeshRenderer meshRenderer = transformedObj.AddComponent<MeshRenderer>();
-    //    meshRenderer.material = defaultMat;
-
-    //    // 获取原始网格的包围盒来映射UV坐标
-    //    Bounds bounds = newMesh.bounds;
-
-    //    float minX = -2.5f;
-    //    float maxX = 2.5f;
-    //    float minZ = -2.5f;
-    //    float maxZ = 2.5f;
-
-    //    //计算原始网格对应模块Cube的坐标点来映射UV坐标
-
-
-    //    //原始网格坐标点
-    //    Vector3 originalA = new Vector3(minX, 0, minZ);
-    //    Vector3 originalB = new Vector3(minX, 0, maxZ);
-    //    Vector3 originalC = new Vector3(maxX, 0, maxZ);
-    //    Vector3 originalD = new Vector3(maxX, 0, minZ);
-
-    //    //目标网格坐标点
-    //    Vector3 targetA = new Vector3(posX0, 0, posZ0);
-    //    Vector3 targetB = new Vector3(posX1, 0, posZ1);
-    //    Vector3 targetC = new Vector3(posX2, 0, posZ2);
-    //    Vector3 targetD = new Vector3(posX3, 0, posZ3);
-
-    //    for (int i = 0; i < vertices.Length; i++)
-    //    {
-    //        // 计算顶点在包围盒中的归一化坐标
-    //        float u = Mathf.InverseLerp(minX, maxX, vertices[i].x);
-    //        float v = Mathf.InverseLerp(minZ, maxZ, vertices[i].z);
-
-    //        // 使用double lerp计算新位置
-    //        Vector3 interpolatedPosition = BilinearInterpolation(u, v, targetA, targetB, targetC, targetD);
-
-    //        // y坐标不变
-    //        interpolatedPosition.y = vertices[i].y * 10f;
-
-    //        vertices[i] = interpolatedPosition;
-    //    }
-
-    //    newMesh.vertices = vertices;
-
-    //    newMesh.RecalculateNormals();
-    //    newMesh.RecalculateBounds();
-    //    newMesh.name = "TestMesh";
-
-    //    // 新网格赋给目标物体
-    //    transformedMeshFilter.sharedMesh = newMesh;
-    //}
-
-    ///// <summary>
-    ///// 双线性插值算法
-    ///// </summary>
-    //private Vector3 BilinearInterpolation(float u, float v, Vector3 A, Vector3 B, Vector3 C, Vector3 D)
-    //{
-    //    // uv坐标归一化
-    //    u = Mathf.Clamp01(u);
-    //    v = Mathf.Clamp01(v);
-
-    //    // double lerp
-    //    Vector3 result = (1 - u) * (1 - v) * A +
-    //                    (1 - u) * v * B +
-    //                    u * (1 - v) * D +
-    //                    u * v * C;
-
-    //    return result;
-    //}
-
-    //public void GeneratePoint()
-    //{
-    //    testMeshData = new List<Vector3>();
-    //    Vector3 newPos = new Vector3(posX0, 0, posZ0);
-    //    testMeshData.Add(newPos);
-    //    newPos = new Vector3(posX1, 0, posZ1);
-    //    testMeshData.Add(newPos);
-    //    newPos = new Vector3(posX2, 0, posZ2);
-    //    testMeshData.Add(newPos);
-    //    newPos = new Vector3(posX3, 0, posZ3);
-    //    testMeshData.Add(newPos);
-    //}
-
+    /// <summary>
+    /// 绘制调试信息
+    /// </summary>
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.yellow;
-        foreach (Vector3 var in allVertices)
+        List<Vector3> bottomVertices = moduleDatas[0].bottomVertices;
+        List<Vector3> topVertices = moduleDatas[0].topVertices;
+
+        if (showFixedBounds)
         {
-            Gizmos.DrawSphere(var, pointRadius);
+            Gizmos.color = Color.green.WithAlpha(0.1f);
+            Gizmos.DrawWireCube(Vector3.zero, Vector3.one * fixedBoundSize);
+
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(Vector3.zero, 0.5f);
+        }
+
+        Gizmos.color = Color.yellow;
+        foreach (Vector3 v in bottomVertices)
+        {
+            Gizmos.DrawSphere(transform.position + v, pointRadius);
+        }
+
+        Gizmos.color = Color.green;
+        foreach (Vector3 v in topVertices)
+        {
+            Gizmos.DrawSphere(transform.position + v, pointRadius);
+        }
+
+        if (bottomVertices.Count >= 4)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(transform.position + bottomVertices[0], transform.position + bottomVertices[1]);
+            Gizmos.DrawLine(transform.position + bottomVertices[1], transform.position + bottomVertices[2]);
+            Gizmos.DrawLine(transform.position + bottomVertices[2], transform.position + bottomVertices[3]);
+            Gizmos.DrawLine(transform.position + bottomVertices[3], transform.position + bottomVertices[0]);
+
+            Gizmos.color = Color.blue.WithAlpha(0.5f);
+            for (int i = 0; i < 4; i++)
+            {
+                //Debug.Log(bottomVertices[i]);
+                //Debug.Log(topVertices[i]);
+                if (topVertices.Count > i)
+                {
+                    Gizmos.DrawLine(transform.position + bottomVertices[i], transform.position + topVertices[i]);
+                }
+            }
+
+            if (topVertices.Count >= 4)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawLine(transform.position + topVertices[0], transform.position + topVertices[1]);
+                Gizmos.DrawLine(transform.position + topVertices[1], transform.position + topVertices[2]);
+                Gizmos.DrawLine(transform.position + topVertices[2], transform.position + topVertices[3]);
+                Gizmos.DrawLine(transform.position + topVertices[3], transform.position + topVertices[0]);
+            }
         }
     }
+}
+
+/// <summary>
+/// Color扩展方法
+/// </summary>
+public static class ColorExtensions
+{
+    public static Color WithAlpha(this Color color, float alpha)
+    {
+        return new Color(color.r, color.g, color.b, alpha);
+    }
+}
+
+[System.Serializable]
+public class ModuleData
+{
+    public int vertIndex;
+    public List<Vector3> bottomVertices = new List<Vector3>();
+    public List<Vector3> topVertices = new List<Vector3>();
+    public List<Vector3> bottomNormals = new List<Vector3>();
 }
