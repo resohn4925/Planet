@@ -9,16 +9,26 @@ public class PlanetPipelineEditor : Editor
     {
         DrawDefaultInspector();
 
-        PlanetPipeline s = (PlanetPipeline)target;
+        PlanetPipeline planetPipeline = (PlanetPipeline)target;
 
         if (GUILayout.Button("Init"))
         {
-            s.Init();
+            planetPipeline.Init();
         }
 
-        if (GUILayout.Button("GenerateMesh"))
+        if (GUILayout.Button("GenerateObj"))
         {
-            s.GenerateMesh();
+            planetPipeline.GenerateObj();
+        }
+
+        if (GUILayout.Button("ShowDebug"))
+        {
+            planetPipeline.ShowDebug();
+        }
+
+        if (GUILayout.Button("ShowGeometry"))
+        {
+            planetPipeline.ShowGeometry();
         }
     }
 }

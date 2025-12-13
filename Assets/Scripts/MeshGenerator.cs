@@ -22,7 +22,7 @@ public class MeshGenerator : MonoBehaviour
     [Header("Atmos")]
     public GameObject atmos;
 
-    private List<MeshData> meshDataList = new List<MeshData>();
+    public List<MeshData> meshDataList = new List<MeshData>();
 
     private bool isRunning;
     private Mesh mesh;
@@ -55,11 +55,15 @@ public class MeshGenerator : MonoBehaviour
         mesh.name = "PlaneToSphereMesh";
 
         CubeFace[] allFaces = (CubeFace[])System.Enum.GetValues(typeof(CubeFace));
-        foreach (CubeFace face in allFaces)
-        {
-            MeshData meshData = new MeshData(face);
-            meshDataList.Add(meshData);
-        }
+        //foreach (CubeFace face in allFaces)
+        //{
+        //    MeshData meshData = new MeshData(face);
+        //    meshDataList.Add(meshData);
+        //}
+
+        MeshData meshData = new MeshData(CubeFace.Right);
+        meshDataList.Clear();
+        meshDataList.Add(meshData);
 
         foreach (MeshData var in meshDataList)
         {
@@ -230,6 +234,11 @@ public class MeshGenerator : MonoBehaviour
 
         atmosInstance = Instantiate(atmos);
         atmosInstance.transform.localScale *= 2.02f * sphereRadius;
+    }
+
+    public void ShowDebug()
+    {
+        Debug.Log(meshDataList[0].GetModifiedPointFinalPosition(2, 2, meshNum));//打印变形后第x,y个点的位置
     }
 
 }

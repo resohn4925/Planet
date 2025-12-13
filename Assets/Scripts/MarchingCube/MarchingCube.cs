@@ -55,6 +55,8 @@ public class MarchingCube : MonoBehaviour
 
     public ModulePointData[,,] modulePointArray;
 
+    public bool isShowGeo;//显示几何调试信息
+
     public void Init()
     {
         Clear();
@@ -696,6 +698,31 @@ public class MarchingCube : MonoBehaviour
         {
             return;
         }
+
+        if (!isShowGeo) return;
+
+        //foreach (MarchingCubeData.ObjPointData pointData in marchingCubeData.objPointDatas)
+        //{
+        //    Vector3 worldPos = pointData.pos;
+        //    Gizmos.color = pointData.isActive ? Color.red : Color.yellow;
+        //    Gizmos.DrawSphere(worldPos, 0.5f);
+        //}
+
+        //draw module point
+        //Gizmos.color = Color.grey;
+        //foreach (MarchingCubeData.ModulePointData modulePointData in marchingCubeData.modulePointDatas)
+        //{
+        //    Vector3 worldPos = modulePointData.pos;
+        //    Gizmos.DrawSphere(worldPos, 0.5f);
+        //}
+
+        if (marchingCubeData.modifyPointDatas == null) return;
+        Gizmos.color = Color.green;
+        foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
+        {
+            Vector3 worldPos = modifyPointData.pos;
+            Gizmos.DrawSphere(worldPos, 0.4f);
+        }
     }
 
     public class MarchingCubeData
@@ -705,9 +732,17 @@ public class MarchingCube : MonoBehaviour
         public int layers;
         public float spacing;
 
+        //modifymesh相关
+        public float sphereRadius;
+        public float moduleHeight;
+
         public ObjPointData[,,] objPointArray;
 
         public List<ObjPointData> objPointDatas = new List<ObjPointData>();
+
+        public List<ModulePointData> modulePointDatas = new List<ModulePointData>();
+
+        public List<ModifyPointData> modifyPointDatas = new List<ModifyPointData>();
 
         public MarchingCubeData(int rows, int columns, int layers, float spacing)
         {
@@ -807,8 +842,6 @@ public class MarchingCube : MonoBehaviour
             }
         }
 
-        public List<ModulePointData> modulePointDatas = new List<ModulePointData>();
-
         public class ModulePointData
         {
             public int xIndex;
@@ -847,6 +880,24 @@ public class MarchingCube : MonoBehaviour
             }
         }
 
+        public class ModifyPointData
+        {
+            public int xIndex;
+            public int yIndex;
+            public int zIndex;
+            public Vector3 pos;
+            public Vector3 normal;
+        }
+
+        public void SetModifyPointData(List<ModifyPointData> datas)
+        {
+            modifyPointDatas = new List<ModifyPointData>(datas);
+            foreach (ModifyPointData data in modifyPointDatas)
+            {
+                Debug.Log($"ModifyPointData: 索引({data.xIndex},{data.yIndex},{data.zIndex}) 位置:{data.pos}");
+            }
+        }
+
         public void CalculateModuleName()
         {
             foreach (ModulePointData modulePoint in modulePointDatas)
@@ -874,6 +925,37 @@ public class MarchingCube : MonoBehaviour
                 modulePoint.moduleName = $"{blbd}{brbd}{brfd}{blfd}{tlbu}{trbu}{trfu}{tlfu}";
                 //Debug.Log($"{modulePoint.xIndex},{modulePoint.yIndex},{modulePoint.zIndex}:{modulePoint.moduleName}");
             }
+        }
+
+        public List<Vector3> PrintModifyPointsAroundModule(int x, int y, int z)
+        {
+            List<Vector3> modifyPointPos = new();
+
+            (int, int, int)[] points =
+            {
+        (x, y, z),
+        (x, y, z + 1),
+        (x + 1, y, z),
+        (x + 1, y, z + 1)
+    };
+            for (int i = 0; i < points.Length; i++)
+            {
+                var (px, py, pz) = points[i];
+                ModifyPointData found = null;
+
+                foreach (ModifyPointData data in modifyPointDatas)
+                {
+                    if (data.xIndex == px && data.yIndex == py && data.zIndex == pz)
+                    {
+                        found = data;
+                        break;
+                    }
+                }
+
+                //Debug.Log($"索引({px},{py},{pz}), 位置:{(found != null ? found.pos.ToString() : "未找到")}");
+                modifyPointPos.Add(found.pos);
+            }
+            return modifyPointPos;
         }
 
         private bool GetObjPointState(int x, int z, int y)

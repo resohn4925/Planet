@@ -50,6 +50,8 @@ namespace TowerStacker
 
         private List<GameObject> moduleInstances;
 
+        private bool isShowGeo;
+
         public void Init()
         {
             Clear();
@@ -307,6 +309,7 @@ namespace TowerStacker
 
         public class MarchingCubeData
         {
+            public string dataFaceType;
             public int rows;
             public int columns;
             public int layers;
@@ -322,7 +325,6 @@ namespace TowerStacker
                 this.spacing = spacing;
 
                 SetPointData();
-
                 SetModulePointData();
             }
 

@@ -11,6 +11,7 @@ public class MeshData
     public List<Vector3> normals = new List<Vector3>();//法线存储
     public List<Vector2> uvs = new List<Vector2>();//顶点归一化平面坐标
     public List<int> triangles = new List<int>();
+    public List<Vector3> modifyVertices = new List<Vector3>();//modifypoint坐标
 
     public MeshData(CubeFace faceType)
     {
@@ -29,13 +30,14 @@ public class MeshData
     {
         if (meshNum <= 0)
             return;
+
         int verNum = meshNum + 1;
+        modifyVertices.Clear();
 
         for (int y = 0; y < verNum; y++)
         {
             for (int x = 0; x < verNum; x++)
             {
-
                 Vector2 uv = new Vector2(
                    x / (float)meshNum,
                    y / (float)meshNum
@@ -54,8 +56,28 @@ public class MeshData
                 vertices.Add(pos);
                 normals.Add(Vector3.up);
                 uvs.Add(uv);
+
+                if ((x % 2 == 1 && y % 2 == 1) ||
+                    ((x == 0 || x == meshNum) && (y % 2 == 1 || y == 0 || y == meshNum)) ||
+                    ((y == 0 || y == meshNum) && (x % 2 == 1 || x == 0 || x == meshNum)))
+                {
+                    modifyVertices.Add(new Vector3(x, y, 0));
+                }
             }
         }
+    }
+
+    public Vector3 GetModifiedPointFinalPosition(int indexX, int indexY, int meshNum)
+    {
+        int vertexIndex = indexY * (meshNum + 1) + indexX;
+
+        if (vertexIndex >= 0 && vertexIndex < vertices.Count)
+        {
+            return vertices[vertexIndex];
+        }
+
+        Debug.LogWarning($"索引 ({indexX},{indexY}) 超出范围，总顶点数: {vertices.Count}");
+        return Vector3.zero;
     }
 
     public Quaternion Rotation(CubeFace faceType)
