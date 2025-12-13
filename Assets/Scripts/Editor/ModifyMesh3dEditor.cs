@@ -14,10 +14,5 @@ public class ModifyMesh3dEditor : Editor
         {
             generator.GenerateModule();
         }
-
-        if (GUILayout.Button("GenerateTestModule"))
-        {
-            generator.GenerateTestModule();
-        }
     }
 }

@@ -6,36 +6,36 @@ public class MarchingSquare : MonoBehaviour
 {
     public List<GameObject> modulePrefabs;
 
-    public List<GameObject> modulePrefabsBasic;//¿ÉÍ¨¹ı¿Õ¼ä±ä»»µÃµ½ËùÓĞÄ£¿éµÄÒ»×é»ù´¡Ä£¿é
+    public List<GameObject> modulePrefabsBasic;//å¯é€šè¿‡ç©ºé—´å˜æ¢å¾—åˆ°æ‰€æœ‰æ¨¡å—çš„ä¸€ç»„åŸºç¡€æ¨¡å—
 
     public GameObject moduleCollection;
 
     public GameObject brush;
 
-    //[Header("±ÊË¢Ä£Ê½")]
+    //[Header("ç¬”åˆ·æ¨¡å¼")]
     //public bool isCreateMode;
 
-    [Header("±ÊË¢Ä£Ê½")]
+    [Header("ç¬”åˆ·æ¨¡å¼")]
     [SerializeField]
     private EditMode currentMode;
 
-    [Header("±ÊË¢´óĞ¡")]
+    [Header("ç¬”åˆ·å¤§å°")]
     [Range(0.5f, 5f)]
     [SerializeField]
     private float brushSize = 1f;
 
     private float currentBrushSize = 0f;
 
-    [Header("ÊµÊ±¸üĞÂ")]
+    [Header("å®æ—¶æ›´æ–°")]
     public bool isUpdate;
 
-    [Header("µ¥Î»³¤¶È")]
+    [Header("å•ä½é•¿åº¦")]
     public float spacing = 2f;
 
-    [Header("xĞĞÊıÁ¿")]
+    [Header("xè¡Œæ•°é‡")]
     public int rows = 5;
 
-    [Header("zĞĞÊıÁ¿")]
+    [Header("zè¡Œæ•°é‡")]
     public int columns = 5;
 
     [System.Serializable]
@@ -47,7 +47,7 @@ public class MarchingSquare : MonoBehaviour
 
     private List<GameObject> moduleInstances;
 
-    //moduleÓ³Éä¹ØÏµ
+    //moduleæ˜ å°„å…³ç³»
     private Dictionary<string, string> moduleNameToBaseMap = new Dictionary<string, string>();
 
     private Dictionary<string, float> moduleNameToRotationMap = new Dictionary<string, float>();
@@ -65,7 +65,7 @@ public class MarchingSquare : MonoBehaviour
         UpdateAllModules();
     }
 
-    #region moduleÓ³Éä
+    #region moduleæ˜ å°„
     private void InitMapping()
     {
         moduleNameToBaseMap.Clear();
@@ -202,7 +202,7 @@ public class MarchingSquare : MonoBehaviour
 
         //        return Instantiate(module,
         //                       marchingSquareData.modulePointDatas[moduleIndex].pos,
-        //                       module.transform.rotation); // Ê¹ÓÃÔ¤ÖÆÌåµÄĞı×ªÊı¾İ
+        //                       module.transform.rotation); // ä½¿ç”¨é¢„åˆ¶ä½“çš„æ—‹è½¬æ•°æ®
         //    }
         //}
 
@@ -216,11 +216,11 @@ public class MarchingSquare : MonoBehaviour
         float rotation = mapping.rotation;
         Vector3 position = marchingSquareData.modulePointDatas[moduleIndex].pos;
 
-        //Debug.Log($"²éÕÒ{originalModuleName}Ä£¿éĞı×ª{rotation}¶ÈºóµÄÄ£¿é:{mappedName}");
+        //Debug.Log($"æŸ¥æ‰¾{originalModuleName}æ¨¡å—æ—‹è½¬{rotation}åº¦åçš„æ¨¡å—:{mappedName}");
 
         if (string.IsNullOrEmpty(mappedName))
         {
-            Debug.LogWarning($"Ä£¿é {originalModuleName} Ó³ÉäÊ§°Ü£¬ÎŞ·¨ÕÒµ½»ù´¡Ä£¿é");
+            Debug.LogWarning($"æ¨¡å— {originalModuleName} æ˜ å°„å¤±è´¥ï¼Œæ— æ³•æ‰¾åˆ°åŸºç¡€æ¨¡å—");
             return null;
         }
 
@@ -229,7 +229,7 @@ public class MarchingSquare : MonoBehaviour
 
         if (mappedModule == null)
         {
-            Debug.LogWarning($"ÔÚ modulePrefabs ÖĞÕÒ²»µ½Ó³ÉäµÄÄ£¿é: {mappedName} (Ô­Ä£¿é: {originalModuleName})");
+            Debug.LogWarning($"åœ¨ modulePrefabs ä¸­æ‰¾ä¸åˆ°æ˜ å°„çš„æ¨¡å—: {mappedName} (åŸæ¨¡å—: {originalModuleName})");
             return null;
         }
 
@@ -342,7 +342,7 @@ public class MarchingSquare : MonoBehaviour
         }
 
         /// <summary>
-        /// ÉèÖÃObjµãÕóÊı×éÊı¾İ
+        /// è®¾ç½®Objç‚¹é˜µæ•°ç»„æ•°æ®
         /// </summary>
         public void SetPointData()
         {
@@ -380,7 +380,7 @@ public class MarchingSquare : MonoBehaviour
         }
 
         /// <summary>
-        /// ÉèÖÃmoduleµãÕóÊı¾İ
+        /// è®¾ç½®moduleç‚¹é˜µæ•°æ®
         /// </summary>
         public void SetModulePointData()
         {

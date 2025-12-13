@@ -1,105 +1,127 @@
-                     using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ModifyMesh3d : MonoBehaviour
 {
-    [Header("Ä¿±êÄ£¿é")]
+    [Header("ç›®æ ‡æ¨¡å—")]
     public GameObject targetModule;
     public List<GameObject> moduleList = new List<GameObject>();
     public Material defaultMat;
 
-    [Header("¹Ì¶¨±ß½çÉèÖÃ")]
-    public float fixedBoundSize = 5f;//Ä¬ÈÏµÈÓÚÄ£¿éÁ¢·½Ìå³¤¶È
+    [Header("å›ºå®šè¾¹ç•Œè®¾ç½®")]
+    public float fixedBoundSize = 5f;//é»˜è®¤çš„åŸå§‹æ¨¡å‹åŒ…å›´ç›’å°ºå¯¸
 
-    [Header("ÇòÌåÉèÖÃ")]
-    public float sphereRadius = 10f;
+    [Header("çƒé¢è®¾ç½®")]
+    public float sphereRadius = 20f;
+    public float sphereRadiusTop = 25f;
     public float moduleHeight = 2f;
 
-    [Header("µ×²¿ËÄ±ßĞÎ¶¥µã£¨ÇòÃæ×ø±ê£©")]
-    [Range(0, 360)] public float theta0 = 45f;
-    [Range(-90, 90)] public float phi0 = -2.5f;
-
-    [Range(0, 360)] public float theta1 = 45f;
-    [Range(-90, 90)] public float phi1 = 2.5f;
-
-    [Range(0, 360)] public float theta2 = 50f;
-    [Range(-90, 90)] public float phi2 = 2.5f;
-
-    [Range(0, 360)] public float theta3 = 50f;
-    [Range(-90, 90)] public float phi3 = -2.5f;
-
-    [Header("¼¸ºÎ¿ÉÊÓ»¯")]
+    [Header("å¯è§†åŒ–é€‰é¡¹")]
     public float pointRadius = 0.2f;
     public bool showFixedBounds = true;
+    public bool showAllModules = true;
 
-    // ´æ´¢Éú³ÉµÄ¿ØÖÆµã
+    // å­˜å‚¨ç”Ÿæˆçš„æ¨¡å—é¡¶ç‚¹
     private List<Vector3> bottomVertices = new List<Vector3>();
     private List<Vector3> topVertices = new List<Vector3>();
     private List<Vector3> bottomNormals = new List<Vector3>();
 
-    private GameObject deformedModule;
-
+    private List<GameObject> deformedModules = new List<GameObject>();
     private List<ModuleData> moduleDatas = new();
 
     /// <summary>
-    /// Éú³É±äĞÎÄ£¿é
+    /// ç”Ÿæˆä¸€ç³»åˆ—å˜å½¢æ¨¡å—
     /// </summary>
     public void GenerateModule()
     {
-        GenerateSphereQuad(theta0, phi0, theta1, phi1, theta2, phi2, theta3, phi3, bottomVertices, bottomNormals);
-        ExtrudeToHexahedron(bottomVertices, bottomNormals, topVertices);
-        //DeformModule();
+        ClearAllModules();
+        GenerateQuad();
+
+        // ä¸ºæ¯ä¸ªæ¨¡å—æ•°æ®åˆ›å»ºå¯¹åº”çš„å˜å½¢æ¨¡å—
+        for (int i = 0; i < moduleDatas.Count; i++)
+        {
+            ModuleData moduleData = moduleDatas[i];
+
+            // ç¡®ä¿æœ‰å¯¹åº”çš„æ¨¡å—é¢„åˆ¶ä½“
+            GameObject sourceModule = i < moduleList.Count ? moduleList[i] : targetModule;
+            if (sourceModule == null)
+            {
+                Debug.LogWarning($"æ¨¡å—{i}æ²¡æœ‰å¯¹åº”çš„é¢„åˆ¶ä½“ï¼Œè·³è¿‡");
+                continue;
+            }
+
+            // åˆ›å»ºå˜å½¢æ¨¡å—
+            GameObject deformedModule = DeformModule(sourceModule, moduleData.bottomVertices, moduleData.topVertices);
+            if (deformedModule != null)
+            {
+                deformedModule.name = $"Deformed_Module_{i}";
+                deformedModules.Add(deformedModule);
+            }
+        }
     }
 
-    /// <summary>
-    /// Éú³ÉÒ»×é²âÊÔ±äĞÎÄ£¿é
-    /// </summary>
-    public void GenerateTestModule()
-    {
-        GenerateTestQuad();
-        for (int i = 0; i < 4; i++)
-        {
-            Debug.Log(moduleDatas[0].bottomVertices[i]);
-        }
-        ExtrudeToHexahedron(moduleDatas[0].bottomVertices, moduleDatas[0].topVertices, moduleDatas[0].bottomNormals);
-        for (int i = 0; i < 4; i++)
-        {
-            Debug.Log(moduleDatas[0].bottomVertices[i]);
-        }
-        DeformModule();
-    }
-
-    private void GenerateTestQuad()
+    private void GenerateQuad()
     {
         moduleDatas.Clear();
-        for(int i = 0; i < 1; i++)
-        {
-            ModuleData moduleData = new();
-            moduleDatas.Add(moduleData);
-        }
 
-        GenerateSphereQuad(0, -10, 0, 10, 20, 10, 20, -10, moduleDatas[0].bottomVertices, moduleDatas[0].bottomNormals);
-        for (int i = 0; i < 4; i++)
-        {
-            Debug.Log(moduleDatas[0].bottomVertices[i]);
-        }
+        ModuleData module1 = new ModuleData();
+        GenerateSphereQuad(-22.5f, -22.5f, -22.5f, 0, 0, 0, 0, -22.5f, module1.bottomVertices, module1.bottomNormals, sphereRadius);
+        ExtrudeToHexahedron(module1.bottomVertices, module1.bottomNormals, module1.topVertices);
+        moduleDatas.Add(module1);
+
+        ModuleData module2 = new ModuleData();
+        GenerateSphereQuad(-22.5f, 0, -22.5f, 22.5f, 0, 22.5f, 0, 0, module2.bottomVertices, module2.bottomNormals, sphereRadius);
+        ExtrudeToHexahedron(module2.bottomVertices, module2.bottomNormals, module2.topVertices);
+        moduleDatas.Add(module2);
+
+        ModuleData module3 = new ModuleData();
+        GenerateSphereQuad(0, 0, 0, 22.5f, 22.5f, 22.5f, 22.5f, 0, module3.bottomVertices, module3.bottomNormals, sphereRadius);
+        ExtrudeToHexahedron(module3.bottomVertices, module3.bottomNormals, module3.topVertices);
+        moduleDatas.Add(module3);
+
+        ModuleData module4 = new ModuleData();
+        GenerateSphereQuad(0, -22.5f, 0, 0, 22.5f, 0, 22.5f, -22.5f, module4.bottomVertices, module4.bottomNormals, sphereRadius);
+        ExtrudeToHexahedron(module4.bottomVertices, module4.bottomNormals, module4.topVertices);
+        moduleDatas.Add(module4);
+
+        // ç”Ÿæˆé¡¶éƒ¨å››ä¸ªæ¨¡å—
+        ModuleData module5 = new ModuleData();
+        GenerateSphereQuad(-22.5f, -22.5f, -22.5f, 0, 0, 0, 0, -22.5f, module5.bottomVertices, module5.bottomNormals, sphereRadiusTop);
+        ExtrudeToHexahedron(module5.bottomVertices, module5.bottomNormals, module5.topVertices);
+        moduleDatas.Add(module5);
+
+        ModuleData module6 = new ModuleData();
+        GenerateSphereQuad(-22.5f, 0, -22.5f, 22.5f, 0, 22.5f, 0, 0, module6.bottomVertices, module6.bottomNormals, sphereRadiusTop);
+        ExtrudeToHexahedron(module6.bottomVertices, module6.bottomNormals, module6.topVertices);
+        moduleDatas.Add(module6);
+
+        ModuleData module7 = new ModuleData();
+        GenerateSphereQuad(0, 0, 0, 22.5f, 22.5f, 22.5f, 22.5f, 0, module7.bottomVertices, module7.bottomNormals, sphereRadiusTop);
+        ExtrudeToHexahedron(module7.bottomVertices, module7.bottomNormals, module7.topVertices);
+        moduleDatas.Add(module7);
+
+        ModuleData module8 = new ModuleData();
+        GenerateSphereQuad(0, -22.5f, 0, 0, 22.5f, 0, 22.5f, -22.5f, module8.bottomVertices, module8.bottomNormals, sphereRadiusTop);
+        ExtrudeToHexahedron(module8.bottomVertices, module8.bottomNormals, module8.topVertices);
+        moduleDatas.Add(module8);
     }
 
     /// <summary>
-    /// Éú³Éµ×²¿µã
+    /// ç”Ÿæˆçƒé¢å››è¾¹å½¢
     /// </summary>
-    public void GenerateSphereQuad(float vt0, float vp0, float vt1, float vp1, float vt2, float vp2, float vt3, float vp3, List<Vector3> bvs, List<Vector3> bNormals)
+    public void GenerateSphereQuad(float vt0, float vp0, float vt1, float vp1, float vt2, float vp2, float vt3, float vp3,
+                                  List<Vector3> bvs, List<Vector3> bNormals, float sphereRadius)
     {
         bvs.Clear();
         bNormals.Clear();
 
-        AddSpherePoint(vt1, vp0, bvs, bNormals);
-        AddSpherePoint(vt1, vp1, bvs, bNormals);
-        AddSpherePoint(vt2, vp2, bvs, bNormals);
-        AddSpherePoint(vt3, vp3, bvs, bNormals);
+        AddSpherePoint(vt0, vp0, bvs, bNormals, sphereRadius);
+        AddSpherePoint(vt1, vp1, bvs, bNormals, sphereRadius);
+        AddSpherePoint(vt2, vp2, bvs, bNormals, sphereRadius);
+        AddSpherePoint(vt3, vp3, bvs, bNormals, sphereRadius);
     }
 
-    void AddSpherePoint(float theta, float phi, List<Vector3> bvs, List<Vector3> bNormals)
+    void AddSpherePoint(float theta, float phi, List<Vector3> bvs, List<Vector3> bNormals, float sphereRadius)
     {
         Vector3 p = SphericalToCartesian(theta, phi, sphereRadius);
         bvs.Add(p);
@@ -107,45 +129,44 @@ public class ModifyMesh3d : MonoBehaviour
     }
 
     /// <summary>
-    /// Éú³É¶¥²¿µã
+    /// æŒ¤å‡ºå½¢æˆå…­é¢ä½“
     /// </summary>
-    void ExtrudeToHexahedron(List<Vector3> bPos, List<Vector3>tPos, List<Vector3> bNormal)
+    void ExtrudeToHexahedron(List<Vector3> bPos, List<Vector3> bNormal, List<Vector3> tPos)
     {
-        topVertices.Clear();
+        tPos.Clear();
 
         for (int i = 0; i < 4; i++)
         {
             Vector3 bottomPos = bPos[i];
             Vector3 normal = bNormal[i];
-
             Vector3 topPos = bottomPos + normal * moduleHeight;
             tPos.Add(topPos);
         }
     }
 
     /// <summary>
-    /// ½«Ä£¿éÓ³Éäµ½±äĞÎÁùÃæÌå
+    /// å°†æ¨¡å‹æ˜ å°„åˆ°å››è¾¹å½¢å˜å½¢ä½“
     /// </summary>
-    void DeformModule()
+    GameObject DeformModule(GameObject sourceModule, List<Vector3> bvs, List<Vector3> tvs)
     {
-        if (targetModule == null)
+        if (sourceModule == null)
         {
-            Debug.LogError("Ä¿±êÄ£¿éÎª¿Õ");
-            return;
+            Debug.LogError("æºæ¨¡å—ä¸ºç©º");
+            return null;
         }
 
-        MeshFilter sourceFilter = targetModule.GetComponent<MeshFilter>();
+        MeshFilter sourceFilter = sourceModule.GetComponent<MeshFilter>();
         if (sourceFilter == null || sourceFilter.sharedMesh == null)
         {
-            Debug.LogError("Ä¿±êÄ£¿éÃ»ÓĞÍø¸ñ");
-            return;
+            Debug.LogError("æºæ¨¡å—æ²¡æœ‰æœ‰æ•ˆç½‘æ ¼");
+            return null;
         }
 
         Mesh originalMesh = sourceFilter.sharedMesh;
         Vector3[] originalVerts = originalMesh.vertices;
 
-        Quaternion sourceRot = targetModule.transform.localRotation;
-        Vector3 sourceScale = targetModule.transform.localScale;
+        Quaternion sourceRot = sourceModule.transform.localRotation;
+        Vector3 sourceScale = sourceModule.transform.localScale;
         Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
 
         Vector3[] bakedVerts = new Vector3[originalVerts.Length];
@@ -154,20 +175,18 @@ public class ModifyMesh3d : MonoBehaviour
             bakedVerts[i] = bakeMatrix.MultiplyPoint3x4(originalVerts[i]);
         }
 
-        Vector3[] newVerts = new Vector3[bakedVerts.Length];
-
         Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
         Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
 
+        Vector3[] newVerts = new Vector3[bakedVerts.Length];
         for (int i = 0; i < bakedVerts.Length; i++)
         {
             Vector3 normalized = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
-
-            newVerts[i] = TrilinearInterpolation(normalized.x, normalized.z, normalized.y);
+            newVerts[i] = TrilinearInterpolation(normalized.x, normalized.z, normalized.y, bvs, tvs);
         }
 
         Mesh deformedMesh = new Mesh();
-        deformedMesh.name = "DeformedInstance_FixedBounds";
+        deformedMesh.name = "DeformedMesh";
         deformedMesh.vertices = newVerts;
         deformedMesh.uv = originalMesh.uv;
         deformedMesh.triangles = originalMesh.triangles;
@@ -176,13 +195,8 @@ public class ModifyMesh3d : MonoBehaviour
         deformedMesh.RecalculateTangents();
         deformedMesh.RecalculateBounds();
 
-        if (deformedModule != null)
-        {
-            DestroyImmediate(deformedModule);
-        }
-
-        deformedModule = new GameObject("DeformedModule_FixedBounds");
-        deformedModule.transform.position = transform.position;
+        GameObject deformedModule = new GameObject();
+        deformedModule.transform.position = Vector3.zero;
         deformedModule.transform.rotation = Quaternion.identity;
         deformedModule.transform.localScale = Vector3.one;
 
@@ -192,11 +206,24 @@ public class ModifyMesh3d : MonoBehaviour
         MeshRenderer newRenderer = deformedModule.AddComponent<MeshRenderer>();
         newRenderer.material = defaultMat != null ? defaultMat : new Material(Shader.Find("Standard"));
 
-        Debug.Log($"Ä£¿é±äĞÎÍê³É - ¹Ì¶¨±ß½ç: {fixedBoundSize}, ¶¥µãÊı: {newVerts.Length}");
+        return deformedModule;
     }
 
     /// <summary>
-    /// Ê¹ÓÃ¹Ì¶¨±ß½ç¹éÒ»»¯£¨¾ÍÏñMarchingCubeÖĞµÄ¹Ì¶¨¼ä¾à£©
+    /// æ¸…é™¤æ‰€æœ‰ç”Ÿæˆçš„æ¨¡å—
+    /// </summary>
+    private void ClearAllModules()
+    {
+        foreach (GameObject obj in deformedModules)
+        {
+            if (obj != null)
+                DestroyImmediate(obj);
+        }
+        deformedModules.Clear();
+    }
+
+    /// <summary>
+    /// ä½¿ç”¨å›ºå®šè¾¹ç•Œå½’ä¸€åŒ–ä¸€ä¸ªç‚¹
     /// </summary>
     Vector3 NormalizeToFixedBounds(Vector3 point, Vector3 min, Vector3 max)
     {
@@ -208,23 +235,27 @@ public class ModifyMesh3d : MonoBehaviour
     }
 
     /// <summary>
-    /// ÈıÏßĞÔ²åÖµ
+    /// ä¸‰çº¿æ€§æ’å€¼
     /// </summary>
-    Vector3 TrilinearInterpolation(float u, float v, float w)
+    Vector3 TrilinearInterpolation(float u, float v, float w, List<Vector3> bvs, List<Vector3> tvs)
     {
+        u = Mathf.Clamp01(u);
+        v = Mathf.Clamp01(v);
+        w = Mathf.Clamp01(w);
+
         Vector3 bottomPos = BilinearInterpolation(u, v,
-            bottomVertices[0], bottomVertices[1],
-            bottomVertices[2], bottomVertices[3]);
+            bvs[0], bvs[1],
+            bvs[2], bvs[3]);
 
         Vector3 topPos = BilinearInterpolation(u, v,
-            topVertices[0], topVertices[1],
-            topVertices[2], topVertices[3]);
+            tvs[0], tvs[1],
+            tvs[2], tvs[3]);
 
         return Vector3.Lerp(bottomPos, topPos, w);
     }
 
     /// <summary>
-    /// Ë«ÏßĞÔ²åÖµ¹«Ê½
+    /// åŒçº¿æ€§æ’å€¼å…¬å¼
     /// </summary>
     Vector3 BilinearInterpolation(float u, float v, Vector3 p00, Vector3 p01, Vector3 p11, Vector3 p10)
     {
@@ -235,7 +266,7 @@ public class ModifyMesh3d : MonoBehaviour
     }
 
     /// <summary>
-    /// ÇòÃæ×ø±ê×ªÖ±½Ç×ø±ê
+    /// çƒé¢åæ ‡è½¬ç›´è§’åæ ‡
     /// </summary>
     private Vector3 SphericalToCartesian(float theta, float phi, float radius)
     {
@@ -248,73 +279,108 @@ public class ModifyMesh3d : MonoBehaviour
     }
 
     /// <summary>
-    /// »æÖÆµ÷ÊÔĞÅÏ¢
+    /// ç»˜åˆ¶Gizmosæ˜¾ç¤ºä¿¡æ¯
     /// </summary>
     private void OnDrawGizmos()
     {
-        List<Vector3> bottomVertices = moduleDatas[0].bottomVertices;
-        List<Vector3> topVertices = moduleDatas[0].topVertices;
-
         if (showFixedBounds)
         {
-            Gizmos.color = Color.green.WithAlpha(0.1f);
+            Gizmos.color = Color.white;
             Gizmos.DrawWireCube(Vector3.zero, Vector3.one * fixedBoundSize);
 
-            Gizmos.color = Color.green;
+            Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(Vector3.zero, 0.5f);
         }
 
-        Gizmos.color = Color.yellow;
-        foreach (Vector3 v in bottomVertices)
+        if (showAllModules && moduleDatas.Count > 0)
         {
-            Gizmos.DrawSphere(transform.position + v, pointRadius);
-        }
-
-        Gizmos.color = Color.green;
-        foreach (Vector3 v in topVertices)
-        {
-            Gizmos.DrawSphere(transform.position + v, pointRadius);
-        }
-
-        if (bottomVertices.Count >= 4)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawLine(transform.position + bottomVertices[0], transform.position + bottomVertices[1]);
-            Gizmos.DrawLine(transform.position + bottomVertices[1], transform.position + bottomVertices[2]);
-            Gizmos.DrawLine(transform.position + bottomVertices[2], transform.position + bottomVertices[3]);
-            Gizmos.DrawLine(transform.position + bottomVertices[3], transform.position + bottomVertices[0]);
-
-            Gizmos.color = Color.blue.WithAlpha(0.5f);
-            for (int i = 0; i < 4; i++)
+            for (int moduleIndex = 0; moduleIndex < moduleDatas.Count; moduleIndex++)
             {
-                //Debug.Log(bottomVertices[i]);
-                //Debug.Log(topVertices[i]);
-                if (topVertices.Count > i)
+                ModuleData moduleData = moduleDatas[moduleIndex];
+
+                Gizmos.color = Color.yellow;
+                foreach (Vector3 v in moduleData.bottomVertices)
                 {
-                    Gizmos.DrawLine(transform.position + bottomVertices[i], transform.position + topVertices[i]);
+                    Gizmos.DrawSphere(transform.position + v, pointRadius);
+                }
+
+                foreach (Vector3 v in moduleData.topVertices)
+                {
+                    Gizmos.DrawSphere(transform.position + v, pointRadius);
+                }
+
+                if (moduleData.bottomVertices.Count >= 4)
+                {
+                    Gizmos.color = Color.white;
+                    Gizmos.DrawLine(transform.position + moduleData.bottomVertices[0], transform.position + moduleData.bottomVertices[1]);
+                    Gizmos.DrawLine(transform.position + moduleData.bottomVertices[1], transform.position + moduleData.bottomVertices[2]);
+                    Gizmos.DrawLine(transform.position + moduleData.bottomVertices[2], transform.position + moduleData.bottomVertices[3]);
+                    Gizmos.DrawLine(transform.position + moduleData.bottomVertices[3], transform.position + moduleData.bottomVertices[0]);
+                }
+
+                if (moduleData.topVertices.Count >= 4)
+                {
+                    Gizmos.color = Color.white;
+                    Gizmos.DrawLine(transform.position + moduleData.topVertices[0], transform.position + moduleData.topVertices[1]);
+                    Gizmos.DrawLine(transform.position + moduleData.topVertices[1], transform.position + moduleData.topVertices[2]);
+                    Gizmos.DrawLine(transform.position + moduleData.topVertices[2], transform.position + moduleData.topVertices[3]);
+                    Gizmos.DrawLine(transform.position + moduleData.topVertices[3], transform.position + moduleData.topVertices[0]);
+                }
+
+                Gizmos.color = Color.white;
+                for (int i = 0; i < 4; i++)
+                {
+                    if (moduleData.topVertices.Count > i && moduleData.bottomVertices.Count > i)
+                    {
+                        Gizmos.DrawLine(transform.position + moduleData.bottomVertices[i], transform.position + moduleData.topVertices[i]);
+                    }
                 }
             }
+        }
+        else if (moduleDatas.Count > 0)
+        {
+            List<Vector3> bottomVertices = moduleDatas[0].bottomVertices;
+            List<Vector3> topVertices = moduleDatas[0].topVertices;
 
-            if (topVertices.Count >= 4)
+            Gizmos.color = Color.yellow;
+            foreach (Vector3 v in bottomVertices)
             {
-                Gizmos.color = Color.magenta;
-                Gizmos.DrawLine(transform.position + topVertices[0], transform.position + topVertices[1]);
-                Gizmos.DrawLine(transform.position + topVertices[1], transform.position + topVertices[2]);
-                Gizmos.DrawLine(transform.position + topVertices[2], transform.position + topVertices[3]);
-                Gizmos.DrawLine(transform.position + topVertices[3], transform.position + topVertices[0]);
+                Gizmos.DrawSphere(transform.position + v, pointRadius);
+            }
+
+            Gizmos.color = Color.green;
+            foreach (Vector3 v in topVertices)
+            {
+                Gizmos.DrawSphere(transform.position + v, pointRadius);
+            }
+
+            if (bottomVertices.Count >= 4)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawLine(transform.position + bottomVertices[0], transform.position + bottomVertices[1]);
+                Gizmos.DrawLine(transform.position + bottomVertices[1], transform.position + bottomVertices[2]);
+                Gizmos.DrawLine(transform.position + bottomVertices[2], transform.position + bottomVertices[3]);
+                Gizmos.DrawLine(transform.position + bottomVertices[3], transform.position + bottomVertices[0]);
+
+                Gizmos.color = Color.white;
+                for (int i = 0; i < 4; i++)
+                {
+                    if (topVertices.Count > i)
+                    {
+                        Gizmos.DrawLine(transform.position + bottomVertices[i], transform.position + topVertices[i]);
+                    }
+                }
+
+                if (topVertices.Count >= 4)
+                {
+                    Gizmos.color = Color.magenta;
+                    Gizmos.DrawLine(transform.position + topVertices[0], transform.position + topVertices[1]);
+                    Gizmos.DrawLine(transform.position + topVertices[1], transform.position + topVertices[2]);
+                    Gizmos.DrawLine(transform.position + topVertices[2], transform.position + topVertices[3]);
+                    Gizmos.DrawLine(transform.position + topVertices[3], transform.position + topVertices[0]);
+                }
             }
         }
-    }
-}
-
-/// <summary>
-/// ColorÀ©Õ¹·½·¨
-/// </summary>
-public static class ColorExtensions
-{
-    public static Color WithAlpha(this Color color, float alpha)
-    {
-        return new Color(color.r, color.g, color.b, alpha);
     }
 }
 
@@ -325,4 +391,5 @@ public class ModuleData
     public List<Vector3> bottomVertices = new List<Vector3>();
     public List<Vector3> topVertices = new List<Vector3>();
     public List<Vector3> bottomNormals = new List<Vector3>();
+    public float radius;
 }

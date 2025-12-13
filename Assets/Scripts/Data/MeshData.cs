@@ -7,9 +7,9 @@ using UnityEngine.AI;
 public class MeshData
 {
     public CubeFace faceType;
-    public List<Vector3> vertices = new List<Vector3>();//¶¥µãÊÀ½ç×ø±ê
-    public List<Vector3> normals = new List<Vector3>();//·¨Ïß´æ´¢
-    public List<Vector2> uvs = new List<Vector2>();//¶¥µã¹éÒ»»¯Æ½Ãæ×ø±ê
+    public List<Vector3> vertices = new List<Vector3>();//é¡¶ç‚¹ä¸–ç•Œåæ ‡
+    public List<Vector3> normals = new List<Vector3>();//æ³•çº¿å­˜å‚¨
+    public List<Vector2> uvs = new List<Vector2>();//é¡¶ç‚¹å½’ä¸€åŒ–å¹³é¢åæ ‡
     public List<int> triangles = new List<int>();
 
     public MeshData(CubeFace faceType)
@@ -86,7 +86,7 @@ public class MeshData
 
         for (int i = 0; i < vertices.Count; i++)
         {
-            Vector3 scaledVertex = vertices[i] / halfSize;//¹éÒ»»¯×ø±ê
+            Vector3 scaledVertex = vertices[i] / halfSize;//å½’ä¸€åŒ–åæ ‡
 
             float x = scaledVertex.x;
             float y = scaledVertex.y;

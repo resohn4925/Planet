@@ -5,7 +5,7 @@ using UnityEngine;
 public class OriginState : IChangeState
 {
     /// <summary>
-    /// ³õÊ¼»¯database
+    /// åˆå§‹åŒ–database
     /// </summary>
     public void OnProgress()
     {

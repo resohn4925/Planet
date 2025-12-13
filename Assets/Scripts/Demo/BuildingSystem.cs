@@ -33,7 +33,7 @@ namespace TowerStacker
         private Vector3Int lastGridPos = new Vector3Int(-1, -1, -1);
 
         /// <summary>
-        /// ³õÊ¼»¯
+        /// åˆå§‹åŒ–
         /// </summary>
         //static BuildingSystem()
         //{
@@ -68,14 +68,14 @@ namespace TowerStacker
 
             if (!isEditing)
             {
-                if (GUILayout.Button("¿ªÊ¼±à¼­", GUILayout.Height(30)))
+                if (GUILayout.Button("å¼€å§‹ç¼–è¾‘", GUILayout.Height(30)))
                 {
                     StartEditing();
                 }
             }
             else
             {
-                if (GUILayout.Button("½áÊø±à¼­", GUILayout.Height(30)))
+                if (GUILayout.Button("ç»“æŸç¼–è¾‘", GUILayout.Height(30)))
                 {
                     StopEditing();
                 }
@@ -243,7 +243,7 @@ namespace TowerStacker
 
         private void Init()
         {
-            Debug.Log("Íø¸ñ³õÊ¼»¯");
+            Debug.Log("ç½‘æ ¼åˆå§‹åŒ–");
 
             int x = marchingCube.rows;
             int y = marchingCube.columns;
