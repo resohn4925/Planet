@@ -935,8 +935,8 @@ public class MarchingCube : MonoBehaviour
             {
         (x, y, z),
         (x, y, z + 1),
-        (x + 1, y, z),
-        (x + 1, y, z + 1)
+        (x + 1, y, z + 1),
+        (x + 1, y, z)
     };
             for (int i = 0; i < points.Length; i++)
             {

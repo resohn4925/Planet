@@ -11,6 +11,7 @@ namespace Planet
         [Header("脚本引用")]
         public MeshGenerator meshGenerator;
         public MarchingCube marchingCube;
+        public ModifyMesh3d modifyMesh3D;
 
         [Header("网格生成参数")]
         public int columnsPerFace;//每面行数
@@ -21,6 +22,8 @@ namespace Planet
         [Header("Debug参数")]
         public bool showVerts;
         public bool showMeshs;
+
+        public GameObject TestMesh;
 
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
@@ -228,13 +231,16 @@ namespace Planet
         public void ModifyModule()
         {
             List<Vector3> modifyPointPos = new();
-            modifyPointPos = marchingCube.marchingCubeData.PrintModifyPointsAroundModule(1, 1, 3);
+            modifyPointPos = marchingCube.marchingCubeData.PrintModifyPointsAroundModule(1, 1, 2);
+            //输出单一模块的四个底部点
             foreach (Vector3 pos in modifyPointPos)
             {
                 //Debug.Log(pos);
-
             }
 
+            MeshFilter meshFilter = TestMesh.GetComponent<MeshFilter>();
+            Mesh deformedMesh = modifyMesh3D.DeformMeshByFourPoints(modifyPointPos, meshFilter.sharedMesh);
+            meshFilter.mesh = deformedMesh;
         }
         #endregion
 

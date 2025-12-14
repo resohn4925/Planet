@@ -29,6 +29,68 @@ public class ModifyMesh3d : MonoBehaviour
     private List<GameObject> deformedModules = new List<GameObject>();
     private List<ModuleData> moduleDatas = new();
 
+    public Mesh DeformMeshByFourPoints(List<Vector3> bottomPoints, Mesh originalMesh, float height = 0)
+    {
+        if (bottomPoints == null || bottomPoints.Count != 4)
+        {
+            Debug.LogError("底部点列表必须包含4个点");
+            return null;
+        }
+
+        if (originalMesh == null)
+        {
+            Debug.LogError("原始网格不能为空");
+            return null;
+        }
+
+        // 如果高度为0，使用默认高度
+        float actualHeight = height > 0 ? height : moduleHeight;
+
+        // 计算法线（从球心到点的方向）
+        List<Vector3> normals = new List<Vector3>();
+        foreach (Vector3 point in bottomPoints)
+        {
+            normals.Add(point.normalized);
+        }
+
+        // 计算顶部点
+        List<Vector3> topPoints = new List<Vector3>();
+        for (int i = 0; i < 4; i++)
+        {
+            topPoints.Add(bottomPoints[i] + normals[i] * actualHeight);
+        }
+
+        // 获取原始网格顶点
+        Vector3[] originalVerts = originalMesh.vertices;
+
+        // 计算固定边界
+        Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
+        Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
+
+        // 变形顶点
+        Vector3[] newVerts = new Vector3[originalVerts.Length];
+        for (int i = 0; i < originalVerts.Length; i++)
+        {
+            Vector3 normalized = NormalizeToFixedBounds(originalVerts[i], fixedMin, fixedMax);
+            newVerts[i] = TrilinearInterpolation(normalized.x, normalized.z, normalized.y, bottomPoints, topPoints);
+        }
+
+        // 创建新网格
+        Mesh deformedMesh = new Mesh();
+        deformedMesh.name = "DeformedMesh_ByPoints";
+        deformedMesh.vertices = newVerts;
+        deformedMesh.uv = originalMesh.uv;
+        deformedMesh.triangles = originalMesh.triangles;
+        deformedMesh.normals = originalMesh.normals;
+        deformedMesh.tangents = originalMesh.tangents;
+
+        deformedMesh.RecalculateNormals();
+        deformedMesh.RecalculateTangents();
+        deformedMesh.RecalculateBounds();
+
+        return deformedMesh;
+    }
+
     /// <summary>
     /// 生成一系列变形模块
     /// </summary>
