@@ -18,12 +18,13 @@ namespace Planet
         public int meshSize;
         public float planetRadius;
         public int layers;
+        public int height;
 
         [Header("Debug参数")]
         public bool showVerts;
         public bool showMeshs;
 
-        public GameObject TestMesh;
+        public GameObject testObj;
 
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
@@ -141,12 +142,12 @@ namespace Planet
             if (baseLayerData == null || baseLayerData.Count == 0)
                 return;
 
-            float layerHeightIncrement = CalculateOptimalLayerHeight();
+            //float layerHeightIncrement = CalculateOptimalLayerHeight();
 
             // 从第二层开始生成
             for (int layerIndex = 1; layerIndex < totalLayers; layerIndex++)
             {
-                float currentLayerHeight = layerIndex * layerHeightIncrement;
+                float currentLayerHeight = layerIndex * height;
 
                 foreach (var basePoint in baseLayerData)
                 {
@@ -222,25 +223,70 @@ namespace Planet
         /// </summary>
         public void GenerateObj()
         {
-            marchingCube.marchingCubeData.objPointArray[0, 0, 0].isActive = true;
-            marchingCube.UpdateModules();
-
             ModifyModule();
         }
-
+        
         public void ModifyModule()
         {
             List<Vector3> modifyPointPos = new();
-            modifyPointPos = marchingCube.marchingCubeData.PrintModifyPointsAroundModule(1, 1, 2);
-            //输出单一模块的四个底部点
-            foreach (Vector3 pos in modifyPointPos)
-            {
-                //Debug.Log(pos);
-            }
 
-            MeshFilter meshFilter = TestMesh.GetComponent<MeshFilter>();
-            Mesh deformedMesh = modifyMesh3D.DeformMeshByFourPoints(modifyPointPos, meshFilter.sharedMesh);
-            meshFilter.mesh = deformedMesh;
+            //生成obj进行原型测试
+            marchingCube.marchingCubeData.objPointArray[1, 1, 0].isActive = true;
+            //marchingCube.marchingCubeData.objPointArray[1, 1, 1].isActive = true;
+            marchingCube.marchingCubeData.objPointArray[2, 1, 0].isActive = true;
+            //marchingCube.marchingCubeData.objPointArray[2, 1, 1].isActive = true;
+            marchingCube.marchingCubeData.objPointArray[2, 2, 0].isActive = true;
+            //marchingCube.marchingCubeData.objPointArray[2, 2, 1].isActive = true;
+            marchingCube.UpdateModules();
+
+            //获取所有module
+            int moduleCount = marchingCube.marchingCubeData.modulePointDatas.Count;
+            Debug.Log($"总模块数量：{moduleCount}，已生成实例数量：{marchingCube.moduleInstances.Count}");
+
+            for (int i = 0; i < moduleCount; i++)
+            {
+                MarchingCube.MarchingCubeData.ModulePointData modulePointData = marchingCube.marchingCubeData.modulePointDatas[i];
+
+                // 跳过空模块（无激活ObjPoint的模块）
+                if (modulePointData.moduleName == "00000000")
+                    continue;
+
+                // 4. 获取当前ModulePointData对应的模块物件
+                GameObject targetModuleObj = null;
+                // 索引边界检查（避免越界）
+                if (i < marchingCube.moduleInstances.Count)
+                {
+                    targetModuleObj = marchingCube.moduleInstances[i];
+                }
+
+                // 5. 判空：跳过未生成实例的模块（如00001111/00000000）
+                if (targetModuleObj == null)
+                {
+                    Debug.LogWarning($"模块索引[{modulePointData.xIndex},{modulePointData.yIndex},{modulePointData.zIndex}] 无对应实例，名称：{modulePointData.moduleName}");
+                    continue;
+                }
+
+                // 6. 打印有效模块信息（验证匹配）
+                Debug.Log($"模块索引{modulePointData.xIndex}{modulePointData.yIndex}{modulePointData.zIndex}，对应物件：{targetModuleObj.name}，位置：{targetModuleObj.transform.position}");
+
+                // 7. 获取该模块的modifyPoint列表
+                modifyPointPos = marchingCube.marchingCubeData.GetModifyPointsAroundModule(
+                    modulePointData.xIndex,
+                    modulePointData.yIndex,
+                    modulePointData.zIndex
+                );
+
+                // 8. 替换testObj为实际模块物件，传入生成逻辑
+                modifyMesh3D.GetGenerateModule(modifyPointPos, targetModuleObj, height);
+            }
+            //foreach (MarchingCube.MarchingCubeData.ModulePointData modulePointData in marchingCube.marchingCubeData.modulePointDatas)
+            //{
+            //    if (modulePointData.moduleName == "00000000") continue;
+            //    Debug.Log($"module索引{modulePointData.xIndex}{modulePointData.yIndex}{modulePointData.zIndex}");
+            //    //获取模块的modifypoint列表
+            //    modifyPointPos = marchingCube.marchingCubeData.GetModifyPointsAroundModule(modulePointData.xIndex, modulePointData.yIndex, modulePointData.zIndex);
+            //    modifyMesh3D.GetGenerateModule(modifyPointPos, testObj, height);
+            //}
         }
         #endregion
 

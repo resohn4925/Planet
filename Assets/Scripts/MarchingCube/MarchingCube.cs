@@ -49,7 +49,7 @@ public class MarchingCube : MonoBehaviour
 
     public MarchingCubeData marchingCubeData;
 
-    private List<GameObject> moduleInstances;
+    public List<GameObject> moduleInstances;
 
     public ObjPointData[,,] objPointArray;
 
@@ -783,7 +783,6 @@ public class MarchingCube : MonoBehaviour
                 {
                     for (int k = 0; k < layers; k++)
                     {
-                        continue;
                         ObjPointData objPointData = new();
 
                         objPointData.xIndex = i;
@@ -808,6 +807,7 @@ public class MarchingCube : MonoBehaviour
             {
                 for (int j = 0; j < columns; j++)
                 {
+                    continue;
                     float randomOffsetX = 0f;
                     float randomOffsetZ = 0f;
 
@@ -927,7 +927,14 @@ public class MarchingCube : MonoBehaviour
             }
         }
 
-        public List<Vector3> PrintModifyPointsAroundModule(int x, int y, int z)
+        /// <summary>
+        /// 根据module计算modifypoint
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        /// <returns></returns>
+        public List<Vector3> GetModifyPointsAroundModule(int x, int y, int z)
         {
             List<Vector3> modifyPointPos = new();
 

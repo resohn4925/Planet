@@ -29,66 +29,132 @@ public class ModifyMesh3d : MonoBehaviour
     private List<GameObject> deformedModules = new List<GameObject>();
     private List<ModuleData> moduleDatas = new();
 
-    public Mesh DeformMeshByFourPoints(List<Vector3> bottomPoints, Mesh originalMesh, float height = 0)
+    /// <summary>
+    /// 生成单个变形模块的接口
+    /// </summary>
+    public void GetGenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, float height)
     {
-        if (bottomPoints == null || bottomPoints.Count != 4)
+        if (sourceModule == null)
         {
-            Debug.LogError("底部点列表必须包含4个点");
-            return null;
+            Debug.LogError("原始模块为空");
+            return;
         }
 
-        if (originalMesh == null)
+        if (bottomPoints == null || bottomPoints.Count < 4)
         {
-            Debug.LogError("原始网格不能为空");
-            return null;
+            Debug.LogError("底部点数量不足4个");
+            return;
         }
 
-        // 如果高度为0，使用默认高度
-        float actualHeight = height > 0 ? height : moduleHeight;
-
-        // 计算法线（从球心到点的方向）
-        List<Vector3> normals = new List<Vector3>();
-        foreach (Vector3 point in bottomPoints)
+        MeshFilter sourceFilter = sourceModule.GetComponent<MeshFilter>();
+        if (sourceFilter == null || sourceFilter.sharedMesh == null)
         {
-            normals.Add(point.normalized);
+            Debug.LogError("原始模块无网格");
+            return;
         }
 
-        // 计算顶部点
+        Mesh originalMesh = sourceFilter.sharedMesh;
+
+        if (height <= 0)
+        {
+            height = moduleHeight;
+        }
+
+        List<Vector3> bottomNormals = new List<Vector3>();
+        for (int i = 0; i < 4; i++)
+        {
+            bottomNormals.Add(bottomPoints[i].normalized);
+        }
+
         List<Vector3> topPoints = new List<Vector3>();
         for (int i = 0; i < 4; i++)
         {
-            topPoints.Add(bottomPoints[i] + normals[i] * actualHeight);
+            Vector3 bottomPos = bottomPoints[i];
+            Vector3 normal = bottomNormals[i];
+            Vector3 topPos = bottomPos + normal * height;
+            topPoints.Add(topPos);
         }
 
-        // 获取原始网格顶点
         Vector3[] originalVerts = originalMesh.vertices;
 
-        // 计算固定边界
+        Quaternion sourceRot = sourceModule.transform.localRotation;
+        Vector3 sourceScale = sourceModule.transform.localScale;
+        Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
+
+        Vector3[] bakedVerts = new Vector3[originalVerts.Length];
+        for (int i = 0; i < originalVerts.Length; i++)
+        {
+            bakedVerts[i] = bakeMatrix.MultiplyPoint3x4(originalVerts[i]);
+        }
+
         Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
         Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
 
-        // 变形顶点
-        Vector3[] newVerts = new Vector3[originalVerts.Length];
-        for (int i = 0; i < originalVerts.Length; i++)
+        Vector3[] newVerts = new Vector3[bakedVerts.Length];
+        for (int i = 0; i < bakedVerts.Length; i++)
         {
-            Vector3 normalized = NormalizeToFixedBounds(originalVerts[i], fixedMin, fixedMax);
-            newVerts[i] = TrilinearInterpolation(normalized.x, normalized.z, normalized.y, bottomPoints, topPoints);
+            Vector3 normalized = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
+
+            newVerts[i] = TrilinearInterpolation(
+                normalized.x, normalized.z, normalized.y,
+                bottomPoints, topPoints
+            );
         }
 
-        // 创建新网格
         Mesh deformedMesh = new Mesh();
-        deformedMesh.name = "DeformedMesh_ByPoints";
+        deformedMesh.name = sourceModule.name + "_modified";
         deformedMesh.vertices = newVerts;
         deformedMesh.uv = originalMesh.uv;
         deformedMesh.triangles = originalMesh.triangles;
-        deformedMesh.normals = originalMesh.normals;
-        deformedMesh.tangents = originalMesh.tangents;
+
+        if (originalMesh.colors != null && originalMesh.colors.Length > 0)
+        {
+            deformedMesh.colors = originalMesh.colors;
+        }
 
         deformedMesh.RecalculateNormals();
-        deformedMesh.RecalculateTangents();
+
+        if (originalMesh.tangents != null && originalMesh.tangents.Length > 0)
+        {
+            deformedMesh.tangents = originalMesh.tangents;
+        }
+        else
+        {
+            deformedMesh.RecalculateTangents();
+        }
+
         deformedMesh.RecalculateBounds();
 
-        return deformedMesh;
+        GameObject modifiedObject = new GameObject(sourceModule.name + "_modified");
+        modifiedObject.transform.position = Vector3.zero;
+        modifiedObject.transform.rotation = Quaternion.identity;
+        modifiedObject.transform.localScale = Vector3.one;
+
+        MeshFilter meshFilter = modifiedObject.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = deformedMesh;
+
+        MeshRenderer meshRenderer = modifiedObject.AddComponent<MeshRenderer>();
+
+        if (defaultMat != null)
+        {
+            meshRenderer.material = defaultMat;
+        }
+        else
+        {
+            MeshRenderer sourceRenderer = sourceModule.GetComponent<MeshRenderer>();
+            if (sourceRenderer != null && sourceRenderer.sharedMaterial != null)
+            {
+                meshRenderer.material = sourceRenderer.sharedMaterial;
+            }
+            else
+            {
+                meshRenderer.material = new Material(Shader.Find("Standard"));
+            }
+        }
+
+        deformedModules.Add(modifiedObject);
+
+        Debug.Log($"已创建变形模块: {modifiedObject.name}");
     }
 
     /// <summary>
@@ -99,12 +165,10 @@ public class ModifyMesh3d : MonoBehaviour
         ClearAllModules();
         GenerateQuad();
 
-        // 为每个模块数据创建对应的变形模块
         for (int i = 0; i < moduleDatas.Count; i++)
         {
             ModuleData moduleData = moduleDatas[i];
 
-            // 确保有对应的模块预制体
             GameObject sourceModule = i < moduleList.Count ? moduleList[i] : targetModule;
             if (sourceModule == null)
             {
@@ -112,7 +176,6 @@ public class ModifyMesh3d : MonoBehaviour
                 continue;
             }
 
-            // 创建变形模块
             GameObject deformedModule = DeformModule(sourceModule, moduleData.bottomVertices, moduleData.topVertices);
             if (deformedModule != null)
             {
