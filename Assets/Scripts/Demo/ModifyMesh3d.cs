@@ -30,7 +30,7 @@ public class ModifyMesh3d : MonoBehaviour
     private List<ModuleData> moduleDatas = new();
 
     /// <summary>
-    /// 生成单个变形模块的接口
+    /// 生成单个变形模块的接口 - 已优化支持多材质和多子网格
     /// </summary>
     public void GetGenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, float height)
     {
@@ -105,20 +105,41 @@ public class ModifyMesh3d : MonoBehaviour
         deformedMesh.name = sourceModule.name + "_modified";
         deformedMesh.vertices = newVerts;
         deformedMesh.uv = originalMesh.uv;
-        deformedMesh.triangles = originalMesh.triangles;
 
+        // 复制颜色数据
         if (originalMesh.colors != null && originalMesh.colors.Length > 0)
         {
             deformedMesh.colors = originalMesh.colors;
         }
 
-        deformedMesh.RecalculateNormals();
-
+        // 复制切线数据
         if (originalMesh.tangents != null && originalMesh.tangents.Length > 0)
         {
             deformedMesh.tangents = originalMesh.tangents;
         }
+
+        // 处理多个子网格 - 保留原始材质ID
+        int subMeshCount = originalMesh.subMeshCount;
+        deformedMesh.subMeshCount = subMeshCount;
+
+        for (int i = 0; i < subMeshCount; i++)
+        {
+            int[] triangles = originalMesh.GetTriangles(i);
+            deformedMesh.SetTriangles(triangles, i);
+        }
+
+        // 可选：如果原始网格有法线则直接复制，否则重新计算
+        if (originalMesh.normals != null && originalMesh.normals.Length > 0)
+        {
+            deformedMesh.normals = originalMesh.normals;
+        }
         else
+        {
+            deformedMesh.RecalculateNormals();
+        }
+
+        // 如果上面没有设置切线，则重新计算
+        if (originalMesh.tangents == null || originalMesh.tangents.Length == 0)
         {
             deformedMesh.RecalculateTangents();
         }
@@ -135,16 +156,39 @@ public class ModifyMesh3d : MonoBehaviour
 
         MeshRenderer meshRenderer = modifiedObject.AddComponent<MeshRenderer>();
 
-        if (defaultMat != null)
+        //拷贝材质
+        MeshRenderer sourceRenderer = sourceModule.GetComponent<MeshRenderer>();
+        if (sourceRenderer != null && sourceRenderer.sharedMaterials.Length > 0)
         {
-            meshRenderer.material = defaultMat;
+            Material[] originalMaterials = sourceRenderer.sharedMaterials;
+            Material[] newMaterials = new Material[originalMaterials.Length];
+
+            for (int i = 0; i < originalMaterials.Length; i++)
+            {
+                if (originalMaterials[i] != null)
+                {
+                    newMaterials[i] = originalMaterials[i];
+                }
+                else
+                {
+                    if (defaultMat != null)
+                    {
+                        newMaterials[i] = defaultMat;
+                    }
+                    else
+                    {
+                        newMaterials[i] = new Material(Shader.Find("Standard"));
+                    }
+                }
+            }
+
+            meshRenderer.sharedMaterials = newMaterials;
         }
         else
         {
-            MeshRenderer sourceRenderer = sourceModule.GetComponent<MeshRenderer>();
-            if (sourceRenderer != null && sourceRenderer.sharedMaterial != null)
+            if (defaultMat != null)
             {
-                meshRenderer.material = sourceRenderer.sharedMaterial;
+                meshRenderer.material = defaultMat;
             }
             else
             {
@@ -154,7 +198,7 @@ public class ModifyMesh3d : MonoBehaviour
 
         deformedModules.Add(modifiedObject);
 
-        Debug.Log($"已创建变形模块: {modifiedObject.name}");
+        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质");
     }
 
     /// <summary>

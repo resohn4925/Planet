@@ -55,15 +55,14 @@ public class MeshGenerator : MonoBehaviour
         mesh.name = "PlaneToSphereMesh";
 
         CubeFace[] allFaces = (CubeFace[])System.Enum.GetValues(typeof(CubeFace));
-        //foreach (CubeFace face in allFaces)
-        //{
-        //    MeshData meshData = new MeshData(face);
-        //    meshDataList.Add(meshData);
-        //}
-
-        MeshData meshData = new MeshData(CubeFace.Right);
         meshDataList.Clear();
-        meshDataList.Add(meshData);
+        foreach (CubeFace face in allFaces)
+        {
+            MeshData meshData = new MeshData(face);
+            meshDataList.Add(meshData);
+        }
+
+        //MeshData meshData = new MeshData(CubeFace.Right);
 
         foreach (MeshData var in meshDataList)
         {

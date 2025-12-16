@@ -57,9 +57,14 @@ public class MeshData
                 normals.Add(Vector3.up);
                 uvs.Add(uv);
 
-                if ((x % 2 == 1 && y % 2 == 1) ||
-                    ((x == 0 || x == meshNum) && (y % 2 == 1 || y == 0 || y == meshNum)) ||
-                    ((y == 0 || y == meshNum) && (x % 2 == 1 || x == 0 || x == meshNum)))
+                //if ((x % 2 == 1 && y % 2 == 1) ||
+                //    ((x == 0 || x == meshNum) && (y % 2 == 1 || y == 0 || y == meshNum)) ||
+                //    ((y == 0 || y == meshNum) && (x % 2 == 1 || x == 0 || x == meshNum)))
+                //{
+                //    modifyVertices.Add(new Vector3(x, y, 0));
+                //}
+
+                if ((x % 2 == 0) && (y % 2 == 0))
                 {
                     modifyVertices.Add(new Vector3(x, y, 0));
                 }

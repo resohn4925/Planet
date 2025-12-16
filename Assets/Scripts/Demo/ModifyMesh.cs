@@ -102,9 +102,6 @@ public class ModifyMesh : MonoBehaviour
         float minZ = -2.5f;
         float maxZ = 2.5f;
 
-        //计算原始网格对应模块Cube的坐标点来映射UV坐标
-
-
         //原始网格坐标点
         Vector3 originalA = new Vector3(minX, 0, minZ);
         Vector3 originalB = new Vector3(minX, 0, maxZ);
