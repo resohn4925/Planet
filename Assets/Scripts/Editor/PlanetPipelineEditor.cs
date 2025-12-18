@@ -16,6 +16,11 @@ public class PlanetPipelineEditor : Editor
             planetPipeline.Init();
         }
 
+        if (GUILayout.Button("ActivateObj"))
+        {
+            planetPipeline.ActivateObj();
+        }
+
         if (GUILayout.Button("GenerateObj"))
         {
             planetPipeline.GenerateObj();

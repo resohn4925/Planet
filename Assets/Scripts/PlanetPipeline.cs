@@ -21,10 +21,12 @@ namespace Planet
         public int height;
 
         [Header("Debug参数")]
+        public int faceIndex;
+        public int activeObjXIndex;
+        public int activeObjYIndex;
+        public int activeObjZIndex;
         public bool showVerts;
         public bool showMeshs;
-
-        public GameObject testObj;
 
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
@@ -45,7 +47,8 @@ namespace Planet
 
             GenerateMesh();
             InitMarchingData();
-            SetModifyPointData();
+
+            SetAllModifyPointDatas();
         }
 
         public void GenerateMesh()
@@ -55,12 +58,24 @@ namespace Planet
 
         public void InitMarchingData()
         {
-            marchingCube.Init();
+            marchingCube.InitAllMarchingCubeDatas();
         }
 
-        public void SetModifyPointData()
+
+        public void SetAllModifyPointDatas()
         {
-            MeshData meshData = meshGenerator.meshDataList[2];
+            foreach(var meshData in meshGenerator.meshDataList)
+            {
+                SetAllModifyPointDatas(meshData);
+            }
+        }
+
+        /// <summary>
+        /// meshdata数据计算modifypoint,赋值给marchingcubedata
+        /// </summary>
+        /// <param name="meshData"></param>
+        public void SetAllModifyPointDatas(MeshData meshData)
+        {
             int verNum = meshGenerator.meshNum + 1;
 
             modifyPointPos.Clear();
@@ -107,7 +122,7 @@ namespace Planet
                     Vector3 actualPos = meshData.vertices[vertexIndex];
 
                     // 第一层向内收缩,距离为height/2+地表偏移
-                    Vector3 contractedPos = ContractPosition(actualPos, height / 2f + 0.5f);
+                    Vector3 contractedPos = ExpandPosition(actualPos, -height / 2f - 0.5f);
                     modifyPointPos.Add(contractedPos);
 
                     int mappedX = xIndexMap[originalX];
@@ -131,23 +146,13 @@ namespace Planet
             int totalLayers = layers + 1;
             GenerateMultiLayerData(layer0Data, totalLayers);
 
-            marchingCube.marchingCubeData.SetModifyPointData(modifyPointDatas);
-        }
-
-        /// <summary>
-        /// 将位置向内收缩指定距离
-        /// </summary>
-        /// <param name="position">原始位置</param>
-        /// <param name="contractionAmount">收缩距离</param>
-        /// <returns>收缩后的位置</returns>
-        private Vector3 ContractPosition(Vector3 position, float contractionAmount)
-        {
-            if (position == Vector3.zero)
-                return position;
-
-            Vector3 radialDirection = position.normalized;
-            // 向球心方向收缩（减去法线方向的距离）
-            return position - radialDirection * contractionAmount;
+            foreach(var marchingCubeData in marchingCube.marchingCubeDatas)
+            {
+                if(marchingCubeData.cubeFace == meshData.faceType)
+                {
+                    marchingCubeData.SetModifyPointData(modifyPointDatas);
+                }
+            }
         }
 
         /// <summary>
@@ -187,7 +192,7 @@ namespace Planet
         }
 
         /// <summary>
-        /// 将位置向外扩展指定距离
+        /// 将位置扩展指定距离
         /// </summary>
         /// <param name="position">原始位置</param>
         /// <param name="expansionAmount">扩展距离</param>
@@ -200,36 +205,6 @@ namespace Planet
             Vector3 radialDirection = position.normalized;
             return position + radialDirection * expansionAmount;
         }
-
-        /// <summary>
-        /// 计算模块高度
-        /// </summary>
-        /// <returns></returns>
-        private float CalculateOptimalLayerHeight()
-        {
-            float estimatedSpacing = (2f * Mathf.PI * planetRadius) / (columnsPerFace * 4);
-
-            if (meshGenerator.meshDataList.Count > 0)
-            {
-                MeshData data = meshGenerator.meshDataList[0];
-                if (data.vertices.Count > 10)
-                {
-                    float sumDist = 0;
-                    int count = 0;
-                    for (int i = 0; i < data.vertices.Count - 1; i += 10)
-                    {
-                        for (int j = i + 1; j < Mathf.Min(i + 5, data.vertices.Count); j++)
-                        {
-                            sumDist += Vector3.Distance(data.vertices[i], data.vertices[j]);
-                            count++;
-                        }
-                    }
-                    return sumDist / Mathf.Max(1, count);
-                }
-            }
-
-            return estimatedSpacing;
-        }
         #endregion
 
         #region 模块生成
@@ -238,35 +213,88 @@ namespace Planet
         /// </summary>
         public void GenerateObj()
         {
-            ModifyModule();
+            //ActivateObj();
+            ClearAllModules();
+            ModifyAllModules();
         }
 
-        public void ModifyModule()
+        public void ActivateObj()
+        {
+            //生成obj进行原型测试
+            marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex,activeObjYIndex,activeObjZIndex].isActive = true;
+        }
+
+        public void ClearAllModules()
+        {
+            if (marchingCube.moduleInstances != null)
+            {
+                foreach (GameObject module in marchingCube.moduleInstances)
+                {
+                    if (module != null)
+                    {
+                        DestroyImmediate(module);
+                    }
+                }
+                marchingCube.moduleInstances.Clear();
+            }
+
+            if (marchingCube.marchingCubeDatas != null)
+            {
+                foreach (var cubeData in marchingCube.marchingCubeDatas)
+                {
+                    if (cubeData.faceModuleInstances != null)
+                    {
+                        foreach (GameObject module in cubeData.faceModuleInstances)
+                        {
+                            if (module != null)
+                            {
+                                DestroyImmediate(module);
+                            }
+                        }
+                        cubeData.faceModuleInstances.Clear();
+                    }
+                }
+            }
+
+            modifyMesh3D.ClearAllModules();
+        }
+
+        public void ModifyAllModules()
+        {
+            foreach(var marchingCubeData in marchingCube.marchingCubeDatas)
+            {
+                ModifyModule(marchingCubeData);
+            }
+        }
+
+        public void ModifyModule(MarchingCube.MarchingCubeData marchingCubeData)
         {
             List<Vector3> modifyPointPos = new();
 
-            //生成obj进行原型测试
-            //marchingCube.marchingCubeData.objPointArray[0, 0, 0].isActive = true;
-            //marchingCube.marchingCubeData.objPointArray[1, 1, 0].isActive = true;
-            //marchingCube.marchingCubeData.objPointArray[1, 2, 0].isActive = true;
-            //marchingCube.marchingCubeData.objPointArray[2, 2, 0].isActive = true;
-            marchingCube.UpdateModules();
+            marchingCube.UpdateModules(marchingCubeData);
 
-            //获取所有module
-            int moduleCount = marchingCube.marchingCubeData.modulePointDatas.Count;
-            Debug.Log($"总模块数量：{moduleCount}，已生成实例数量：{marchingCube.moduleInstances.Count}");
+            // 获取所有module
+            int moduleCount = marchingCubeData.modulePointDatas.Count;
+            Debug.Log($"总模块数量：{moduleCount}，当前面实例数量：{marchingCubeData.faceModuleInstances.Count}");
 
             for (int i = 0; i < moduleCount; i++)
             {
-                MarchingCube.MarchingCubeData.ModulePointData modulePointData = marchingCube.marchingCubeData.modulePointDatas[i];
+                MarchingCube.MarchingCubeData.ModulePointData modulePointData = marchingCubeData.modulePointDatas[i];
 
                 if (modulePointData.moduleName == "00000000")
                     continue;
 
                 GameObject targetModuleObj = null;
-                if (i < marchingCube.moduleInstances.Count)
+
+                // 使用当前面的模块实例列表
+                if (i < marchingCubeData.faceModuleInstances.Count)
                 {
-                    targetModuleObj = marchingCube.moduleInstances[i];
+                    targetModuleObj = marchingCubeData.faceModuleInstances[i];
+
+                    if (targetModuleObj != null)
+                    {
+                        Debug.Log(targetModuleObj.name);
+                    }
                 }
 
                 if (targetModuleObj == null)
@@ -277,7 +305,7 @@ namespace Planet
 
                 Debug.Log($"模块索引{modulePointData.xIndex}{modulePointData.yIndex}{modulePointData.zIndex}，对应物件：{targetModuleObj.name}，位置：{targetModuleObj.transform.position}");
 
-                modifyPointPos = marchingCube.marchingCubeData.GetModifyPointsAroundModule(
+                modifyPointPos = marchingCubeData.GetModifyPointsAroundModule(
                     modulePointData.xIndex,
                     modulePointData.yIndex,
                     modulePointData.zIndex

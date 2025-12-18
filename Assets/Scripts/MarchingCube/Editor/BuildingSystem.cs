@@ -477,7 +477,7 @@ public class BuildingSystem : EditorWindow
                         yIndex >= 0 && yIndex < marchingCube.layers)
                     {
                         marchingCube.marchingCubeData.objPointArray[xIndex, zIndex, yIndex].isActive = true;
-                        marchingCube.UpdateModules();
+                        marchingCube.UpdateModules(marchingCube.marchingCubeData);
 
                         EditorApplication.delayCall += () =>
                         {
@@ -590,7 +590,7 @@ yIndex >= 0 && yIndex < marchingCube.layers)
 
                     // 如果没有上方模块可以销毁当前模块
                     marchingCube.marchingCubeData.objPointArray[xIndex, zIndex, yIndex].isActive = false;
-                    marchingCube.UpdateModules();
+                    marchingCube.UpdateModules(marchingCube.marchingCubeData);
 
                     EditorApplication.delayCall += () =>
                     {

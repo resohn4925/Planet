@@ -48,6 +48,8 @@ namespace TowerStacker
 
         public MarchingCubeData marchingCubeData;
 
+        public List<MarchingCubeData> marchingCubeDatas;
+
         private List<GameObject> moduleInstances;
 
         private bool isShowGeo;

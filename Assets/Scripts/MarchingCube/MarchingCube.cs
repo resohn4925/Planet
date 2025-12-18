@@ -32,6 +32,8 @@ public class MarchingCube : MonoBehaviour
 
     public int layers = 3;
 
+    public bool showModifyPoint;
+
     [Header("地形数据")]
     public TerrainDataSO terrainDataSO;
 
@@ -47,6 +49,8 @@ public class MarchingCube : MonoBehaviour
         Slope,
         Cliff
     }
+
+    public List<MarchingCubeData> marchingCubeDatas;
 
     public MarchingCubeData marchingCubeData;
 
@@ -69,6 +73,38 @@ public class MarchingCube : MonoBehaviour
         LoadPrefab();
 
         SetPointData();
+
+        m.ModuleCalcu();
+
+        //如果有地形数据就读取，否则手动计算
+        if (terrainDataSO != null)
+        {
+            LoadTerrainData();
+        }
+        else
+        {
+            marchingCubeData.CalculateModuleName();
+        }
+    }
+
+    public void InitAllMarchingCubeDatas()
+    {
+        Clear();
+
+        InitModule();
+
+        RemoveAllObj(EditMode.Slope);
+
+        LoadPrefab();
+
+        marchingCubeDatas = new List<MarchingCubeData>();
+        CubeFace[] allFaces = (CubeFace[])System.Enum.GetValues(typeof(CubeFace));
+        foreach (var cubeface in allFaces)
+        {
+            marchingCubeData = new MarchingCubeData(rows, columns, layers, spacing);
+            marchingCubeData.cubeFace = cubeface;
+            marchingCubeDatas.Add(marchingCubeData);
+        }
 
         m.ModuleCalcu();
 
@@ -153,7 +189,7 @@ public class MarchingCube : MonoBehaviour
 
         // 重新生成
         marchingCubeData.CalculateModuleName();
-        UpdateModules();
+        UpdateModules(marchingCubeData);
         UpdateAllObj(EditMode.Slope);
 
         Debug.Log($"地形数据已加载: {terrainDataSO.saveTime}");
@@ -221,7 +257,7 @@ public class MarchingCube : MonoBehaviour
     #endregion
 
     #region 地形模块生成与销毁
-    public void UpdateModules()
+    public void UpdateModules(MarchingCubeData marchingCubeData)
     {
         marchingCubeData.CalculateModuleName();
 
@@ -231,51 +267,56 @@ public class MarchingCube : MonoBehaviour
             return;
         }
 
-        while (moduleInstances.Count < marchingCubeData.modulePointDatas.Count)
+        foreach (GameObject module in marchingCubeData.faceModuleInstances)
         {
-            moduleInstances.Add(null);
+            if (module != null)
+            {
+                DestroyImmediate(module);
+            }
+        }
+        marchingCubeData.faceModuleInstances.Clear();
+
+        while (marchingCubeData.faceModuleInstances.Count < marchingCubeData.modulePointDatas.Count)
+        {
+            marchingCubeData.faceModuleInstances.Add(null);
         }
 
         for (int i = 0; i < marchingCubeData.modulePointDatas.Count; i++)
         {
             string expectedName = marchingCubeData.modulePointDatas[i].moduleName;
-            bool needsUpdate = moduleInstances[i] == null ||
-                              moduleInstances[i].name != expectedName;
+            bool needsUpdate = marchingCubeData.faceModuleInstances[i] == null ||
+                              marchingCubeData.faceModuleInstances[i].name != expectedName;
 
             if (needsUpdate)
             {
-                //destroy old module
-                if (moduleInstances[i] != null)
+                // 销毁旧模块实例
+                if (marchingCubeData.faceModuleInstances[i] != null)
                 {
-                    DestroyImmediate(moduleInstances[i]);
+                    DestroyImmediate(marchingCubeData.faceModuleInstances[i]);
                 }
 
-                //initialize and set new module
-                GameObject module = InitializeModule(i);
+                // 初始化和设置新模块
+                GameObject module = InitializeModule(marchingCubeData, i);
                 if (module != null)
                 {
                     module.transform.SetParent(moduleCollection.transform);
-                    moduleInstances[i] = module;
+                    marchingCubeData.faceModuleInstances[i] = module;
                 }
             }
         }
     }
 
-    public GameObject InitializeModule(int moduleIndex)
+    public GameObject InitializeModule(MarchingCubeData marchingCubeData, int moduleIndex)
     {
         string originalModuleName = marchingCubeData.modulePointDatas[moduleIndex].moduleName;
 
         var mapping = m.GetModuleMapping(originalModuleName);
         string mappedName = mapping.baseModule;
 
-        //Debug.Log($"基础模块: {mapping.baseModule}, 旋转: {mapping.rotation}°, 镜像: {mapping.mirrored}");
-
         float rotation = mapping.rotation;
         bool isMirror = mapping.mirrored;
 
         Vector3 position = marchingCubeData.modulePointDatas[moduleIndex].pos;
-
-        //Debug.Log($"查找{originalModuleName}模块旋转{rotation}度后的模块:{mappedName}");
 
         if (string.IsNullOrEmpty(mappedName))
         {
@@ -316,6 +357,7 @@ public class MarchingCube : MonoBehaviour
 
     public void Clear()
     {
+        // 清除全局模块实例列表
         if (moduleInstances != null)
         {
             foreach (GameObject module in moduleInstances)
@@ -325,8 +367,26 @@ public class MarchingCube : MonoBehaviour
                     DestroyImmediate(module);
                 }
             }
-
             moduleInstances.Clear();
+        }
+
+        // 清除每个面的模块实例列表
+        if (marchingCubeDatas != null)
+        {
+            foreach (var marchingCubeData in marchingCubeDatas)
+            {
+                if (marchingCubeData.faceModuleInstances != null)
+                {
+                    foreach (GameObject module in marchingCubeData.faceModuleInstances)
+                    {
+                        if (module != null)
+                        {
+                            DestroyImmediate(module);
+                        }
+                    }
+                    marchingCubeData.faceModuleInstances.Clear();
+                }
+            }
         }
     }
     #endregion
@@ -704,13 +764,17 @@ public class MarchingCube : MonoBehaviour
         //    Gizmos.DrawSphere(worldPos, 0.5f);
         //}
 
-        if (marchingCubeData.modifyPointDatas == null) return;
-        //Gizmos.color = Color.green;
-        //foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
-        //{
-        //    Vector3 worldPos = modifyPointData.pos;
-        //    Gizmos.DrawSphere(worldPos, 0.4f);
-        //}
+        if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
+        Gizmos.color = Color.green;
+
+        foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
+        {
+            foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
+            {
+                Vector3 worldPos = modifyPointData.pos;
+                Gizmos.DrawSphere(worldPos, 0.25f);
+            }
+        }
     }
 
     public class MarchingCubeData
@@ -719,6 +783,7 @@ public class MarchingCube : MonoBehaviour
         public int columns;
         public int layers;
         public float spacing;
+        public CubeFace cubeFace;
 
         //modifymesh相关
         public float sphereRadius;
@@ -731,6 +796,8 @@ public class MarchingCube : MonoBehaviour
         public List<ModulePointData> modulePointDatas = new List<ModulePointData>();
 
         public List<ModifyPointData> modifyPointDatas = new List<ModifyPointData>();
+
+        public List<GameObject> faceModuleInstances = new List<GameObject>();
 
         public MarchingCubeData(int rows, int columns, int layers, float spacing)
         {

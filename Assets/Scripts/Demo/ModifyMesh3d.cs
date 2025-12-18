@@ -381,7 +381,7 @@ public class ModifyMesh3d : MonoBehaviour
     /// <summary>
     /// 清除所有生成的模块
     /// </summary>
-    private void ClearAllModules()
+    public void ClearAllModules()
     {
         foreach (GameObject obj in deformedModules)
         {
