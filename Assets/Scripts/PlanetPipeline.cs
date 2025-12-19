@@ -25,6 +25,7 @@ namespace Planet
         public int activeObjXIndex;
         public int activeObjYIndex;
         public int activeObjZIndex;
+        public bool isActivate;
         public bool showVerts;
         public bool showMeshs;
 
@@ -221,8 +222,20 @@ namespace Planet
         public void ActivateObj()
         {
             //生成obj进行原型测试
-            marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex,activeObjYIndex,activeObjZIndex].isActive = true;
+            marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex, activeObjYIndex, activeObjZIndex].isActive = true;
+
+            //
+            foreach(var marchingCubeData in marchingCube.marchingCubeDatas)
+            {
+                foreach(var objPointData in marchingCubeData.objPointDatas)
+                {
+                    Debug.Log(objPointData.pos);
+                }
+            }
+            //faceRelation.GetObjPointData(marchingCube.marchingCubeDatas[faceIndex].objPointDatas);
         }
+
+
 
         public void ClearAllModules()
         {
