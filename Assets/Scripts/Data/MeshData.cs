@@ -91,14 +91,16 @@ public class MeshData
         {
             case CubeFace.Top:
                 return Quaternion.Euler(180, 0, 0);
+            case CubeFace.Bottom:
+                return Quaternion.Euler(0, 0, 0);
             case CubeFace.Front:
                 return Quaternion.Euler(90, 0, 0);
             case CubeFace.Back:
                 return Quaternion.Euler(-90, 0, 0);
             case CubeFace.Left:
-                return Quaternion.Euler(0, 0, 90);
+                return Quaternion.Euler(90, 0, 90);
             case CubeFace.Right:
-                return Quaternion.Euler(0, 0, -90);
+                return Quaternion.Euler(-90, 0, -90);
             default:
                 return Quaternion.Euler(0, 0, 0);
         }
