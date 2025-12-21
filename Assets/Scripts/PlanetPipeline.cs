@@ -50,6 +50,7 @@ namespace Planet
             InitMarchingData();
 
             SetAllModifyPointDatas();
+            SetAllObjPointDatas();
         }
 
         public void GenerateMesh()
@@ -157,6 +158,57 @@ namespace Planet
         }
 
         /// <summary>
+        /// 把objpointdata从平面赋值给六面体
+        /// </summary>
+        public void SetAllObjPointDatas()
+        {
+            if (marchingCube == null || marchingCube.marchingCubeDatas == null) return;
+
+            foreach (var data in marchingCube.marchingCubeDatas)
+            {
+                float halfSize = data.rows * data.spacing * 0.5f;
+
+                Quaternion faceRotation = GetFaceRotation(data.cubeFace);
+
+                foreach (var point in data.objPointDatas)
+                {
+                    float centeredX = point.pos.x - halfSize;
+                    float centeredZ = point.pos.z - halfSize;
+
+                    float surfaceY = halfSize + point.pos.y;
+
+                    Vector3 localPos = new Vector3(centeredX, surfaceY, centeredZ);
+
+                    point.pos = faceRotation * localPos;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 辅助函数：根据面类型获取旋转四元数
+        /// </summary>
+        private Quaternion GetFaceRotation(CubeFace faceType)
+        {
+            switch (faceType)
+            {
+                case CubeFace.Top:
+                    return Quaternion.Euler(180, 0, 0);
+                case CubeFace.Bottom:
+                    return Quaternion.Euler(0, 0, 0);
+                case CubeFace.Front:
+                    return Quaternion.Euler(90, 0, 0);
+                case CubeFace.Back:
+                    return Quaternion.Euler(-90, 0, 0);
+                case CubeFace.Left:
+                    return Quaternion.Euler(90, 0, 90);
+                case CubeFace.Right:
+                    return Quaternion.Euler(-90, 0, -90);
+                default:
+                    return Quaternion.identity;
+            }
+        }
+
+        /// <summary>
         /// 生成每层的modifypointdata
         /// </summary>
         /// <param name="baseLayerData">基础层数据（已收缩的第一层）</param>
@@ -222,20 +274,29 @@ namespace Planet
         public void ActivateObj()
         {
             //生成obj进行原型测试
-            marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex, activeObjYIndex, activeObjZIndex].isActive = true;
+            //marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex, activeObjYIndex, activeObjZIndex].isActive = true;
 
-            //
-            foreach(var marchingCubeData in marchingCube.marchingCubeDatas)
-            {
-                foreach(var objPointData in marchingCubeData.objPointDatas)
-                {
-                    Debug.Log(objPointData.pos);
-                }
-            }
-            //faceRelation.GetObjPointData(marchingCube.marchingCubeDatas[faceIndex].objPointDatas);
+            SetOverlapPoint();
         }
 
+        /// <summary>
+        /// 设置所有重合点的信息
+        /// </summary>
+        public void SetOverlapPoint()
+        {
+            Vector3 pos = marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex, activeObjYIndex, 0].pos;
+            foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
+            {
+                foreach (var objPointData in marchingCubeData.objPointDatas)
+                {
+                    if (objPointData.pos == pos)
+                    {
+                        marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, activeObjZIndex].isActive = isActivate;
+                    }
 
+                }
+            }
+        }
 
         public void ClearAllModules()
         {

@@ -42,6 +42,8 @@ public class MarchingCube : MonoBehaviour
 
     private List<Vector3> targetMeshData;
 
+    public bool isShowGeo;//显示几何调试信息
+
     [System.Serializable]
     public enum EditMode
     {
@@ -59,8 +61,6 @@ public class MarchingCube : MonoBehaviour
     public ObjPointData[,,] objPointArray;
 
     public ModulePointData[,,] modulePointArray;
-
-    public bool isShowGeo;//显示几何调试信息
 
     public void Init()
     {
@@ -747,7 +747,7 @@ public class MarchingCube : MonoBehaviour
             return;
         }
 
-        if (!isShowGeo) return;
+        //if (marchingCubeDatas == null || !isShowGeo) return;
 
         //foreach (MarchingCubeData.ObjPointData pointData in marchingCubeData.objPointDatas)
         //{
@@ -755,6 +755,25 @@ public class MarchingCube : MonoBehaviour
         //    Gizmos.color = pointData.isActive ? Color.red : Color.yellow;
         //    Gizmos.DrawSphere(worldPos, 0.5f);
         //}
+
+        foreach (var data in marchingCubeDatas)
+        {
+            foreach (MarchingCubeData.ObjPointData pointData in data.objPointDatas)
+            {
+                Vector3 worldPos = pointData.pos;
+                if (data.cubeFace == CubeFace.Back && pointData.xIndex == 0 && pointData.zIndex == 1)
+                {
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawSphere(worldPos, 0.5f);
+                }
+
+                else
+                {
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawSphere(worldPos, 0.25f);
+                }
+            }
+        }
 
         //draw module point
         //Gizmos.color = Color.grey;
@@ -764,17 +783,17 @@ public class MarchingCube : MonoBehaviour
         //    Gizmos.DrawSphere(worldPos, 0.5f);
         //}
 
-        if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
-        Gizmos.color = Color.green;
+        //if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
+        //Gizmos.color = Color.green;
 
-        foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
-        {
-            foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
-            {
-                Vector3 worldPos = modifyPointData.pos;
-                Gizmos.DrawSphere(worldPos, 0.25f);
-            }
-        }
+        //foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
+        //{
+        //    foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
+        //    {
+        //        Vector3 worldPos = modifyPointData.pos;
+        //        Gizmos.DrawSphere(worldPos, 0.25f);
+        //    }
+        //}
     }
 
     public class MarchingCubeData
