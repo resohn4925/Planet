@@ -146,9 +146,21 @@ public class ModifyMesh3d : MonoBehaviour
 
         deformedMesh.RecalculateBounds();
 
+        // 查找或创建 ModifiedRoot 节点
+        GameObject modifiedRoot = GameObject.Find("ModifiedRoot");
+        if (modifiedRoot == null)
+        {
+            modifiedRoot = new GameObject("ModifiedRoot");
+            Debug.Log("创建 ModifiedRoot 节点");
+        }
+
         GameObject modifiedObject = new GameObject(sourceModule.name + "_modified");
-        modifiedObject.transform.position = Vector3.zero;
-        modifiedObject.transform.rotation = Quaternion.identity;
+
+        // 将新对象设置为 ModifiedRoot 的子对象
+        modifiedObject.transform.SetParent(modifiedRoot.transform);
+
+        modifiedObject.transform.localPosition = Vector3.zero;
+        modifiedObject.transform.localRotation = Quaternion.identity;
         modifiedObject.transform.localScale = Vector3.one;
 
         MeshFilter meshFilter = modifiedObject.AddComponent<MeshFilter>();
@@ -198,7 +210,7 @@ public class ModifyMesh3d : MonoBehaviour
 
         deformedModules.Add(modifiedObject);
 
-        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质");
+        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质，父节点: {modifiedRoot.name}");
     }
 
     /// <summary>

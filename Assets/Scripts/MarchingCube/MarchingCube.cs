@@ -76,15 +76,17 @@ public class MarchingCube : MonoBehaviour
 
         m.ModuleCalcu();
 
-        //如果有地形数据就读取，否则手动计算
-        if (terrainDataSO != null)
-        {
-            LoadTerrainData();
-        }
-        else
-        {
-            marchingCubeData.CalculateModuleName();
-        }
+        marchingCubeData.CalculateModuleName();
+
+        ////如果有地形数据就读取，否则手动计算
+        //if (terrainDataSO != null)
+        //{
+        //    LoadTerrainData();
+        //}
+        //else
+        //{
+        //    marchingCubeData.CalculateModuleName();
+        //}
     }
 
     public void InitAllMarchingCubeDatas()
@@ -747,14 +749,14 @@ public class MarchingCube : MonoBehaviour
             return;
         }
 
-        //if (marchingCubeDatas == null || !isShowGeo) return;
-
         //foreach (MarchingCubeData.ObjPointData pointData in marchingCubeData.objPointDatas)
         //{
         //    Vector3 worldPos = pointData.pos;
         //    Gizmos.color = pointData.isActive ? Color.red : Color.yellow;
         //    Gizmos.DrawSphere(worldPos, 0.5f);
         //}
+
+        if (marchingCubeDatas == null || !isShowGeo) return;
 
         foreach (var data in marchingCubeDatas)
         {

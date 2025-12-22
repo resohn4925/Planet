@@ -380,6 +380,16 @@ public class BuildingSystem : EditorWindow
     private void Init()
     {
         SetData();
+
+        rootObj = GameObject.Find("Root");
+        if (rootObj != null)
+        {
+            DestroyImmediate(rootObj);
+            rootObj = new GameObject("Root");
+            rootObj.transform.position = Vector3.zero;
+        }
+        marchingCube.moduleCollection = rootObj;
+
         marchingCube.Init();
     }
 

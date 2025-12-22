@@ -51,6 +51,8 @@ namespace Planet
 
             SetAllModifyPointDatas();
             SetAllObjPointDatas();
+
+            ClearAllModules();
         }
 
         public void GenerateMesh()
@@ -293,7 +295,6 @@ namespace Planet
                     {
                         marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, activeObjZIndex].isActive = isActivate;
                     }
-
                 }
             }
         }
