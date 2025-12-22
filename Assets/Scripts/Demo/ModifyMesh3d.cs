@@ -118,28 +118,84 @@ public class ModifyMesh3d : MonoBehaviour
             deformedMesh.tangents = originalMesh.tangents;
         }
 
-        // 处理多个子网格 - 保留原始材质ID
+        // 检查是否需要翻转三角形
+        bool needFlipTriangles = sourceScale.x < 0 || sourceScale.y < 0 || sourceScale.z < 0;
+        if (needFlipTriangles)
+        {
+            Debug.Log($"检测到负缩放: {sourceScale}，将翻转三角形顺序");
+        }
+
+        // 处理多个子网格
         int subMeshCount = originalMesh.subMeshCount;
         deformedMesh.subMeshCount = subMeshCount;
 
         for (int i = 0; i < subMeshCount; i++)
         {
             int[] triangles = originalMesh.GetTriangles(i);
+
+            // 如果需要翻转三角形
+            if (needFlipTriangles)
+            {
+                // 翻转每个三角形的顶点顺序
+                for (int j = 0; j < triangles.Length; j += 3)
+                {
+                    int temp = triangles[j];
+                    triangles[j] = triangles[j + 2];
+                    triangles[j + 2] = temp;
+                }
+            }
+
             deformedMesh.SetTriangles(triangles, i);
         }
 
-        // 可选：如果原始网格有法线则直接复制，否则重新计算
+        // 如果原始网格有法线则直接复制，否则重新计算
         if (originalMesh.normals != null && originalMesh.normals.Length > 0)
         {
-            deformedMesh.normals = originalMesh.normals;
+            Vector3[] originalNormals = originalMesh.normals;
+            Vector3[] newNormals = new Vector3[originalNormals.Length];
+
+            // 将法线从本地空间转换到世界空间
+            for (int i = 0; i < originalNormals.Length; i++)
+            {
+                // 使用原始变换矩阵的逆转置矩阵来正确变换法线
+                Matrix4x4 normalMatrix = bakeMatrix.inverse.transpose;
+                newNormals[i] = normalMatrix.MultiplyVector(originalNormals[i]).normalized;
+            }
+
+            deformedMesh.normals = newNormals;
         }
         else
         {
             deformedMesh.RecalculateNormals();
         }
 
-        // 如果上面没有设置切线，则重新计算
-        if (originalMesh.tangents == null || originalMesh.tangents.Length == 0)
+        // 如果需要翻转三角形，翻转切线
+        if (needFlipTriangles && originalMesh.tangents != null && originalMesh.tangents.Length > 0)
+        {
+            Vector4[] originalTangents = originalMesh.tangents;
+            Vector4[] newTangents = new Vector4[originalTangents.Length];
+
+            for (int i = 0; i < originalTangents.Length; i++)
+            {
+                // 变换切线方向
+                Vector3 tangentDir = bakeMatrix.MultiplyVector(new Vector3(
+                    originalTangents[i].x,
+                    originalTangents[i].y,
+                    originalTangents[i].z
+                ));
+
+                // 保持w分量（副切线方向标志）
+                newTangents[i] = new Vector4(
+                    tangentDir.x,
+                    tangentDir.y,
+                    tangentDir.z,
+                    originalTangents[i].w
+                );
+            }
+
+            deformedMesh.tangents = newTangents;
+        }
+        else if (originalMesh.tangents == null || originalMesh.tangents.Length == 0)
         {
             deformedMesh.RecalculateTangents();
         }
