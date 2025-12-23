@@ -397,8 +397,8 @@ public class BuildingSystem : EditorWindow
     {
         if (spacing == 0)
             return;
-        float posX = ((int)(pos.x / spacing) + 0.5f) * spacing;
-        float posZ = ((int)(pos.z / spacing) + 0.5f) * spacing;
+        float posX = (Mathf.Floor(pos.x / spacing) + 0.5f) * spacing;
+        float posZ = (Mathf.Floor(pos.z / spacing) + 0.5f) * spacing;
 
         Vector3 currentGridPos = new Vector3(posX, (currentLayers - 1/2f) * spacing, posZ);
 
@@ -448,8 +448,8 @@ public class BuildingSystem : EditorWindow
     /// <param name="pos"></param>
     private void CreateModule(Vector3 pos)
     {
-        int xIndex = (int)(pos.x / spacing);
-        int zIndex = (int)(pos.z / spacing);
+        int xIndex = (int)(Mathf.Floor(pos.x / spacing)) + 1;
+        int zIndex = (int)(Mathf.Floor(pos.z / spacing)) + 1;
         int yIndex = currentLayers - 1;
 
         bool canCreate = false;
@@ -482,9 +482,9 @@ public class BuildingSystem : EditorWindow
                         return;
                     }
                     if (marchingCube.marchingCubeData.objPointArray != null &&
-                        xIndex >= 0 && xIndex < marchingCube.rows &&
-                        zIndex >= 0 && zIndex < marchingCube.columns &&
-                        yIndex >= 0 && yIndex < marchingCube.layers)
+                        xIndex >= 0 && xIndex < marchingCube.rows + 2 &&
+                        zIndex >= 0 && zIndex < marchingCube.columns + 2 &&
+                        yIndex >= 0 && yIndex < marchingCube.layers + 2)
                     {
                         marchingCube.marchingCubeData.objPointArray[xIndex, zIndex, yIndex].isActive = true;
                         marchingCube.UpdateModules(marchingCube.marchingCubeData);
@@ -751,12 +751,12 @@ yIndex >= 0 && yIndex < marchingCube.layers)
     {
         Debug.Log("网格初始化");
 
-        int x = marchingCube.rows;
-        int y = marchingCube.columns;
+        int x = marchingCube.rows + 2;
+        int y = marchingCube.columns + 2;
 
         currentMesh = (GameObject)PrefabUtility.InstantiatePrefab(mesh);
 
-        Vector3 pos = new Vector3(x * spacing / 2, (currentLayers - 1) * spacing, y * spacing / 2);
+        Vector3 pos = new Vector3((x -2) * spacing / 2, (currentLayers - 1) * spacing, (y -2) * spacing / 2);
         currentMesh.transform.position = pos;
         currentMesh.transform.rotation = Quaternion.identity;
         currentMesh.transform.localScale = new Vector3(x * spacing / 10f, 1f, y * spacing / 10f);
