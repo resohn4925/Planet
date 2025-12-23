@@ -7,7 +7,7 @@ namespace TowerStacker
 {
     public class MarchingCube : MonoBehaviour
     {
-        private List<GameObject> modulePrefabsBasic;//¿ÉÍ¨¹ı¿Õ¼ä±ä»»µÃµ½ËùÓĞÄ£¿éµÄÒ»×é»ù´¡Ä£¿é
+        private List<GameObject> modulePrefabsBasic;//å¯é€šè¿‡ç©ºé—´å˜æ¢å¾—åˆ°æ‰€æœ‰æ¨¡å—çš„ä¸€ç»„åŸºç¡€æ¨¡å—
 
         public GameObject moduleCollection;
 
@@ -17,30 +17,30 @@ namespace TowerStacker
 
         public ModuleCalculate m = new();
 
-        [Header("±ÊË¢Ä£Ê½")]
+        [Header("ç¬”åˆ·æ¨¡å¼")]
         [SerializeField]
         private EditMode currentMode;
 
-        [Header("±ÊË¢´óĞ¡")]
+        [Header("ç¬”åˆ·å¤§å°")]
         [Range(0.5f, 5f)]
         [SerializeField]
         private float brushSize = 1f;
 
         private float currentBrushSize = 0f;
 
-        [Header("ÊµÊ±¸üĞÂ")]
+        [Header("å®æ—¶æ›´æ–°")]
         public bool isUpdate;
 
-        [Header("µ¥Î»³¤¶È")]
+        [Header("å•ä½é•¿åº¦")]
         public float spacing = 2f;
 
-        [Header("xĞĞÊıÁ¿")]
+        [Header("xè¡Œæ•°é‡")]
         public int rows = 5;
 
-        [Header("zĞĞÊıÁ¿")]
+        [Header("zè¡Œæ•°é‡")]
         public int columns = 5;
 
-        [Header("yĞĞÊıÁ¿")]
+        [Header("yè¡Œæ•°é‡")]
         public int layers = 5;
 
         [System.Serializable]
@@ -48,19 +48,23 @@ namespace TowerStacker
 
         public MarchingCubeData marchingCubeData;
 
+        public List<MarchingCubeData> marchingCubeDatas;
+
         private List<GameObject> moduleInstances;
+
+        private bool isShowGeo;
 
         public void Init()
         {
             Clear();
 
-            LoadPrefab();//¶ÁÈ¡Ö¸¶¨Â·¾¶µÄprefab
+            LoadPrefab();//è¯»å–æŒ‡å®šè·¯å¾„çš„prefab
 
             SetPointData();
 
             marchingCubeData.CalculateModuleName();
 
-            m.ModuleCalcu();//Ô¤¼ÆËã
+            m.ModuleCalcu();//é¢„è®¡ç®—
 
             UpdateAllModules();
         }
@@ -95,10 +99,10 @@ namespace TowerStacker
                 if (prefab != null)
                 {
                     modulePrefabsBasic.Add(prefab);
-                    //Debug.Log($"¼ÓÔØÔ¤ÖÆÌå: {prefab.name}");
+                    //Debug.Log($"åŠ è½½é¢„åˆ¶ä½“: {prefab.name}");
                 }
             }
-            Debug.Log($"×Ü¹²¼ÓÔØÁË {modulePrefabsBasic.Count} ¸öÔ¤ÖÆÌå");
+            Debug.Log($"æ€»å…±åŠ è½½äº† {modulePrefabsBasic.Count} ä¸ªé¢„åˆ¶ä½“");
         }
 #endif
 
@@ -178,18 +182,18 @@ namespace TowerStacker
             var mapping = m.GetModuleMapping(originalModuleName);
             string mappedName = mapping.baseModule;
 
-            //Debug.Log($"»ù´¡Ä£¿é: {mapping.baseModule}, Ğı×ª: {mapping.rotation}¡ã, ¾µÏñ: {mapping.mirrored}");
+            //Debug.Log($"åŸºç¡€æ¨¡å—: {mapping.baseModule}, æ—‹è½¬: {mapping.rotation}Â°, é•œåƒ: {mapping.mirrored}");
 
             float rotation = mapping.rotation;
             bool isMirror = mapping.mirrored;
 
             Vector3 position = marchingCubeData.modulePointDatas[moduleIndex].pos;
 
-            //Debug.Log($"²éÕÒ{originalModuleName}Ä£¿éĞı×ª{rotation}¶ÈºóµÄÄ£¿é:{mappedName}");
+            //Debug.Log($"æŸ¥æ‰¾{originalModuleName}æ¨¡å—æ—‹è½¬{rotation}åº¦åçš„æ¨¡å—:{mappedName}");
 
             if (string.IsNullOrEmpty(mappedName))
             {
-                Debug.LogWarning($"Ä£¿é {originalModuleName} Ó³ÉäÊ§°Ü£¬ÎŞ·¨ÕÒµ½»ù´¡Ä£¿é");
+                Debug.LogWarning($"æ¨¡å— {originalModuleName} æ˜ å°„å¤±è´¥ï¼Œæ— æ³•æ‰¾åˆ°åŸºç¡€æ¨¡å—");
                 return null;
             }
 
@@ -203,7 +207,7 @@ namespace TowerStacker
 
             if (mappedModule == null)
             {
-                Debug.LogWarning($"ÔÚ modulePrefabs ÖĞÕÒ²»µ½Ó³ÉäµÄÄ£¿é: {mappedName} (Ô­Ä£¿é: {originalModuleName})");
+                Debug.LogWarning($"åœ¨ modulePrefabs ä¸­æ‰¾ä¸åˆ°æ˜ å°„çš„æ¨¡å—: {mappedName} (åŸæ¨¡å—: {originalModuleName})");
                 return null;
             }
 
@@ -307,6 +311,7 @@ namespace TowerStacker
 
         public class MarchingCubeData
         {
+            public string dataFaceType;
             public int rows;
             public int columns;
             public int layers;
@@ -322,7 +327,6 @@ namespace TowerStacker
                 this.spacing = spacing;
 
                 SetPointData();
-
                 SetModulePointData();
             }
 
@@ -336,7 +340,7 @@ namespace TowerStacker
             }
 
             /// <summary>
-            /// ÉèÖÃObjµãÕóÊı×éÊı¾İ
+            /// è®¾ç½®Objç‚¹é˜µæ•°ç»„æ•°æ®
             /// </summary>
             public void SetPointData()
             {
@@ -379,7 +383,7 @@ namespace TowerStacker
             }
 
             /// <summary>
-            /// ÉèÖÃmoduleµãÕóÊı¾İ
+            /// è®¾ç½®moduleç‚¹é˜µæ•°æ®
             /// </summary>
             public void SetModulePointData()
             {
@@ -416,25 +420,25 @@ namespace TowerStacker
 
                 foreach (ModulePointData modulePoint in modulePointDatas)
                 {
-                    bool bottomLeftDown = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex - 1, modulePoint.yIndex - 1); // ×óÏÂºó
-                    bool bottomRightDown = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex, modulePoint.yIndex - 1);    // ÓÒÏÂºó
-                    bool topRightDown = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex, modulePoint.yIndex - 1);          // ÓÒÇ°ÏÂ
-                    bool topLeftDown = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex - 1, modulePoint.yIndex - 1);        // ×óÇ°ÏÂ
+                    bool bottomLeftDown = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex - 1, modulePoint.yIndex - 1); // å·¦ä¸‹å
+                    bool bottomRightDown = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex, modulePoint.yIndex - 1);    // å³ä¸‹å
+                    bool topRightDown = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex, modulePoint.yIndex - 1);          // å³å‰ä¸‹
+                    bool topLeftDown = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex - 1, modulePoint.yIndex - 1);        // å·¦å‰ä¸‹
 
-                    bool bottomLeftUp = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex - 1, modulePoint.yIndex);      // ×óÉÏºó
-                    bool bottomRightUp = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex, modulePoint.yIndex);         // ÓÒÉÏºó
-                    bool topRightUp = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex, modulePoint.yIndex);               // ÓÒÇ°ÉÏ
-                    bool topLeftUp = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex - 1, modulePoint.yIndex);             // ×óÇ°ÉÏ
+                    bool bottomLeftUp = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex - 1, modulePoint.yIndex);      // å·¦ä¸Šå
+                    bool bottomRightUp = GetObjPointState(modulePoint.xIndex - 1, modulePoint.zIndex, modulePoint.yIndex);         // å³ä¸Šå
+                    bool topRightUp = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex, modulePoint.yIndex);               // å³å‰ä¸Š
+                    bool topLeftUp = GetObjPointState(modulePoint.xIndex, modulePoint.zIndex - 1, modulePoint.yIndex);             // å·¦å‰ä¸Š
 
-                    int blbd = bottomLeftDown ? 1 : 0;   // ÏÂ²ã×óÏÂºó
-                    int brbd = bottomRightDown ? 1 : 0;  // ÏÂ²ãÓÒÏÂºó
-                    int brfd = topRightDown ? 1 : 0;     // ÏÂ²ãÓÒÇ°ÏÂ
-                    int blfd = topLeftDown ? 1 : 0;      // ÏÂ²ã×óÇ°ÏÂ
+                    int blbd = bottomLeftDown ? 1 : 0;   // ä¸‹å±‚å·¦ä¸‹å
+                    int brbd = bottomRightDown ? 1 : 0;  // ä¸‹å±‚å³ä¸‹å
+                    int brfd = topRightDown ? 1 : 0;     // ä¸‹å±‚å³å‰ä¸‹
+                    int blfd = topLeftDown ? 1 : 0;      // ä¸‹å±‚å·¦å‰ä¸‹
 
-                    int tlbu = bottomLeftUp ? 1 : 0;     // ÉÏ²ã×óÉÏºó
-                    int trbu = bottomRightUp ? 1 : 0;    // ÉÏ²ãÓÒÉÏºó
-                    int trfu = topRightUp ? 1 : 0;       // ÉÏ²ãÓÒÇ°ÉÏ
-                    int tlfu = topLeftUp ? 1 : 0;        // ÉÏ²ã×óÇ°ÉÏ
+                    int tlbu = bottomLeftUp ? 1 : 0;     // ä¸Šå±‚å·¦ä¸Šå
+                    int trbu = bottomRightUp ? 1 : 0;    // ä¸Šå±‚å³ä¸Šå
+                    int trfu = topRightUp ? 1 : 0;       // ä¸Šå±‚å³å‰ä¸Š
+                    int tlfu = topLeftUp ? 1 : 0;        // ä¸Šå±‚å·¦å‰ä¸Š
 
                     modulePoint.moduleName = $"{blbd}{brbd}{brfd}{blfd}{tlbu}{trbu}{trfu}{tlfu}";
                     //Debug.Log($"{modulePoint.xIndex},{modulePoint.yIndex},{modulePoint.zIndex}:{modulePoint.moduleName}");

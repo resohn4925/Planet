@@ -9,7 +9,7 @@ namespace TowerStacker
         private List<List<string>> nameLists = new();
         private Dictionary<string, (string baseModule, int rotation, bool mirrored)> moduleMapping = new Dictionary<string, (string, int, bool)>();
 
-        [ContextMenu("¼ÆËãÄ£¿éÓ³Éä")]
+        [ContextMenu("è®¡ç®—æ¨¡å—æ˜ å°„")]
         public void ModuleCalcu()
         {
             moduleMapping.Clear();
@@ -26,7 +26,7 @@ namespace TowerStacker
                 List<string> transformations = GetAllTransformations(moduleName);
                 string baseModule = transformations.OrderBy(x => x).First();
 
-                // ÎªÃ¿¸ö±ä»»¼ÆËãÓ³Éä
+                // ä¸ºæ¯ä¸ªå˜æ¢è®¡ç®—æ˜ å°„
                 foreach (string transformedModule in transformations)
                 {
                     (int rotation, bool mirrored) = GetTransformParameters(baseModule, transformedModule);
@@ -37,17 +37,17 @@ namespace TowerStacker
                 nameLists.Add(transformations);
             }
 
-            Debug.Log($"Ô¤¼ÆËãÍê³É£¡¹²ÓĞ {nameLists.Count} ¸ö»ù´¡Ä£¿é");
+            Debug.Log($"é¢„è®¡ç®—å®Œæˆï¼å…±æœ‰ {nameLists.Count} ä¸ªåŸºç¡€æ¨¡å—");
         }
 
         public void OutPutMapping()
         {
             //var result = GetModuleMapping(testModuleName);
-            //Debug.Log($"»ù´¡Ä£¿é: {result.baseModule}, Ğı×ª: {result.rotation}¡ã, ¾µÏñ: {result.mirrored}");
+            //Debug.Log($"åŸºç¡€æ¨¡å—: {result.baseModule}, æ—‹è½¬: {result.rotation}Â°, é•œåƒ: {result.mirrored}");
         }
 
         /// <summary>
-        /// »ñÈ¡Ä£¿éÓ³ÉäĞÅÏ¢£¨Ê¹ÓÃÔ¤¼ÆËã½á¹û£©
+        /// è·å–æ¨¡å—æ˜ å°„ä¿¡æ¯ï¼ˆä½¿ç”¨é¢„è®¡ç®—ç»“æœï¼‰
         /// </summary>
         public (string baseModule, int rotation, bool mirrored) GetModuleMapping(string moduleName)
         {
@@ -57,20 +57,20 @@ namespace TowerStacker
             }
             else
             {
-                Debug.LogError($"Ä£¿éÄ£¿é {moduleName} ²»ÔÚÓ³Éä±íÖĞ£¬ÇëÏÈÔËĞĞModuleCalcu");
+                Debug.LogError($"æ¨¡å—æ¨¡å— {moduleName} ä¸åœ¨æ˜ å°„è¡¨ä¸­ï¼Œè¯·å…ˆè¿è¡ŒModuleCalcu");
                 return (null, 0, false);
             }
         }
 
         /// <summary>
-        /// »ñÈ¡´Ó»ù´¡Ä£¿éµ½Ä¿±êÄ£¿éµÄ±ä»»²ÎÊı
+        /// è·å–ä»åŸºç¡€æ¨¡å—åˆ°ç›®æ ‡æ¨¡å—çš„å˜æ¢å‚æ•°
         /// </summary>
         private (int rotation, bool mirrored) GetTransformParameters(string baseModule, string targetModule)
         {
             if (baseModule == targetModule)
                 return (0, false);
 
-            // ¼ì²éĞı×ª
+            // æ£€æŸ¥æ—‹è½¬
             string rotated = baseModule;
             for (int rotation = 90; rotation <= 270; rotation += 90)
             {
@@ -79,7 +79,7 @@ namespace TowerStacker
                     return (rotation, false);
             }
 
-            // ¼ì²é¾µÏñ+Ğı×ª
+            // æ£€æŸ¥é•œåƒ+æ—‹è½¬
             string mirrored = MirrorX(baseModule);
             if (mirrored == targetModule)
                 return (0, true);
@@ -92,24 +92,24 @@ namespace TowerStacker
                     return (rotation, true);
             }
 
-            Debug.LogError($"ÎŞ·¨È·¶¨´Ó {baseModule} µ½ {targetModule} µÄ±ä»»");
+            Debug.LogError($"æ— æ³•ç¡®å®šä» {baseModule} åˆ° {targetModule} çš„å˜æ¢");
             return (0, false);
         }
 
         /// <summary>
-        /// ·µ»ØÄ£¿é±àÂë¾­¹ıyÖáĞı×ªºÍxÖá¾µÏñºÏ¼Æ8ÖÖ±ä»»ºóµÄÃû×ÖÁĞ±í
+        /// è¿”å›æ¨¡å—ç¼–ç ç»è¿‡yè½´æ—‹è½¬å’Œxè½´é•œåƒåˆè®¡8ç§å˜æ¢åçš„åå­—åˆ—è¡¨
         /// </summary>
         private List<string> GetAllTransformations(string binaryString)
         {
             HashSet<string> transformations = new HashSet<string>();
 
-            // 4ÖÖĞı×ª
+            // 4ç§æ—‹è½¬
             transformations.Add(binaryString);
             transformations.Add(Rotate90(binaryString));
             transformations.Add(Rotate90(Rotate90(binaryString)));
             transformations.Add(Rotate90(Rotate90(Rotate90(binaryString))));
 
-            // 4ÖÖ¾µÏñ+Ğı×ª
+            // 4ç§é•œåƒ+æ—‹è½¬
             string mirrored = MirrorX(binaryString);
             transformations.Add(mirrored);
             transformations.Add(Rotate90(mirrored));

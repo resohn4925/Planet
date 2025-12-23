@@ -7,10 +7,11 @@ using UnityEngine.AI;
 public class MeshData
 {
     public CubeFace faceType;
-    public List<Vector3> vertices = new List<Vector3>();//¶¥µãÊÀ½ç×ø±ê
-    public List<Vector3> normals = new List<Vector3>();//·¨Ïß´æ´¢
-    public List<Vector2> uvs = new List<Vector2>();//¶¥µã¹éÒ»»¯Æ½Ãæ×ø±ê
+    public List<Vector3> vertices = new List<Vector3>();//é¡¶ç‚¹ä¸–ç•Œåæ ‡
+    public List<Vector3> normals = new List<Vector3>();//æ³•çº¿å­˜å‚¨
+    public List<Vector2> uvs = new List<Vector2>();//é¡¶ç‚¹å½’ä¸€åŒ–å¹³é¢åæ ‡
     public List<int> triangles = new List<int>();
+    public List<Vector3> modifyVertices = new List<Vector3>();//modifypointåæ ‡
 
     public MeshData(CubeFace faceType)
     {
@@ -29,13 +30,14 @@ public class MeshData
     {
         if (meshNum <= 0)
             return;
+
         int verNum = meshNum + 1;
+        modifyVertices.Clear();
 
         for (int y = 0; y < verNum; y++)
         {
             for (int x = 0; x < verNum; x++)
             {
-
                 Vector2 uv = new Vector2(
                    x / (float)meshNum,
                    y / (float)meshNum
@@ -54,8 +56,33 @@ public class MeshData
                 vertices.Add(pos);
                 normals.Add(Vector3.up);
                 uvs.Add(uv);
+
+                //if ((x % 2 == 1 && y % 2 == 1) ||
+                //    ((x == 0 || x == meshNum) && (y % 2 == 1 || y == 0 || y == meshNum)) ||
+                //    ((y == 0 || y == meshNum) && (x % 2 == 1 || x == 0 || x == meshNum)))
+                //{
+                //    modifyVertices.Add(new Vector3(x, y, 0));
+                //}
+
+                if ((x % 2 == 0) && (y % 2 == 0))
+                {
+                    modifyVertices.Add(new Vector3(x, y, 0));
+                }
             }
         }
+    }
+
+    public Vector3 GetModifiedPointFinalPosition(int indexX, int indexY, int meshNum)
+    {
+        int vertexIndex = indexY * (meshNum + 1) + indexX;
+
+        if (vertexIndex >= 0 && vertexIndex < vertices.Count)
+        {
+            return vertices[vertexIndex];
+        }
+
+        Debug.LogWarning($"ç´¢å¼• ({indexX},{indexY}) è¶…å‡ºèŒƒå›´ï¼Œæ€»é¡¶ç‚¹æ•°: {vertices.Count}");
+        return Vector3.zero;
     }
 
     public Quaternion Rotation(CubeFace faceType)
@@ -64,14 +91,16 @@ public class MeshData
         {
             case CubeFace.Top:
                 return Quaternion.Euler(180, 0, 0);
+            case CubeFace.Bottom:
+                return Quaternion.Euler(0, 0, 0);
             case CubeFace.Front:
                 return Quaternion.Euler(90, 0, 0);
             case CubeFace.Back:
                 return Quaternion.Euler(-90, 0, 0);
             case CubeFace.Left:
-                return Quaternion.Euler(0, 0, 90);
+                return Quaternion.Euler(90, 0, 90);
             case CubeFace.Right:
-                return Quaternion.Euler(0, 0, -90);
+                return Quaternion.Euler(-90, 0, -90);
             default:
                 return Quaternion.Euler(0, 0, 0);
         }
@@ -86,7 +115,7 @@ public class MeshData
 
         for (int i = 0; i < vertices.Count; i++)
         {
-            Vector3 scaledVertex = vertices[i] / halfSize;//¹éÒ»»¯×ø±ê
+            Vector3 scaledVertex = vertices[i] / halfSize;//å½’ä¸€åŒ–åæ ‡
 
             float x = scaledVertex.x;
             float y = scaledVertex.y;

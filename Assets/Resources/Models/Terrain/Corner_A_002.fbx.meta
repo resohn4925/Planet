@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Resources/Models/Terrain/Corner_A_002.fbx.meta
 guid: 1adb909d8acac11489d6512af0defca3
+========
+guid: 743e13e4a08a201429c8edda1486c85c
+>>>>>>>> MeshModify:Assets/Resources/Models/Terrain/Cliff_F.fbx.meta
 ModelImporter:
   serializedVersion: 21300
   internalIDToNameTable: []

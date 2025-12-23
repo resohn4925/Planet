@@ -7,32 +7,32 @@ public class ModifyMesh : MonoBehaviour
     public GameObject targetObj;
     public Material defaultMat;
 
-    //±äĞÎËÄ±ßĞÎÍø¸ñ×ø±ê
-    [Header("0ºÅµã×ø±ê")]
+    //å˜å½¢å››è¾¹å½¢ç½‘æ ¼åæ ‡
+    [Header("0å·ç‚¹åæ ‡")]
     public float posX0;
     public float posZ0;
 
-    [Header("1ºÅµã×ø±ê")]
+    [Header("1å·ç‚¹åæ ‡")]
     public float posX1;
     public float posZ1;
 
-    [Header("2ºÅµã×ø±ê")]
+    [Header("2å·ç‚¹åæ ‡")]
     public float posX2;
     public float posZ2;
 
-    [Header("3ºÅµã×ø±ê")]
+    [Header("3å·ç‚¹åæ ‡")]
     public float posX3;
     public float posZ3;
 
     List<Vector3> testMeshData = new();
 
-    [Header("¶¥µãĞ¡Çò°ë¾¶")]
+    [Header("é¡¶ç‚¹å°çƒåŠå¾„")]
     public float sphereRadius;
 
     private GameObject transformedObj;
 
     /// <summary>
-    /// Ê¹ÓÃË«ÏßĞÔ²åÖµËã·¨°ÑÄ¿±êµãµÄÎ»ÖÃ±ä»»µ½meshÖĞ
+    /// ä½¿ç”¨åŒçº¿æ€§æ’å€¼ç®—æ³•æŠŠç›®æ ‡ç‚¹çš„ä½ç½®å˜æ¢åˆ°meshä¸­
     /// </summary>
     public void ApplyModifyMesh()
     {
@@ -49,19 +49,19 @@ public class ModifyMesh : MonoBehaviour
             return;
         }
 
-        //¼ÇÂ¼Ô­Ê¼Îï¼ştransform
+        //è®°å½•åŸå§‹ç‰©ä»¶transform
         Quaternion originalRotation = targetObj.transform.rotation;
         Vector3 originalScale = targetObj.transform.localScale;
-        Debug.Log($"Ô­Ê¼Ğı×ª: {originalRotation.eulerAngles}");
-        Debug.Log($"Ô­Ê¼Ëõ·Å: {originalScale}");
+        Debug.Log($"åŸå§‹æ—‹è½¬: {originalRotation.eulerAngles}");
+        Debug.Log($"åŸå§‹ç¼©æ”¾: {originalScale}");
 
-        // »ñÈ¡Ô­Ê¼Íø¸ñ
+        // è·å–åŸå§‹ç½‘æ ¼
         Mesh originalMesh = meshFilter.sharedMesh;
 
-        // ´´½¨Íø¸ñÊµÀı
+        // åˆ›å»ºç½‘æ ¼å®ä¾‹
         Mesh newMesh = new Mesh();
 
-        // ¸´ÖÆÔ­Ê¼Íø¸ñÊı¾İ
+        // å¤åˆ¶åŸå§‹ç½‘æ ¼æ•°æ®
         newMesh.vertices = originalMesh.vertices.Clone() as Vector3[];
         newMesh.triangles = originalMesh.triangles.Clone() as int[];
         newMesh.normals = originalMesh.normals.Clone() as Vector3[];
@@ -94,28 +94,21 @@ public class ModifyMesh : MonoBehaviour
         MeshRenderer meshRenderer = transformedObj.AddComponent<MeshRenderer>();
         meshRenderer.material = defaultMat;
 
-        // »ñÈ¡Ô­Ê¼Íø¸ñµÄ°üÎ§ºĞÀ´Ó³ÉäUV×ø±ê
+        // è·å–åŸå§‹ç½‘æ ¼çš„åŒ…å›´ç›’æ¥æ˜ å°„UVåæ ‡
         Bounds bounds = newMesh.bounds;
-        //float minX = bounds.min.x * originalScale.x;
-        //float maxX = bounds.max.x * originalScale.x;
-        //float minZ = bounds.min.z * originalScale.z;
-        //float maxZ = bounds.max.z * originalScale.z;
 
-        float minX = -1f;
-        float maxX = 1f;
-        float minZ = -1f;
-        float maxZ = 1f;
+        float minX = -2.5f;
+        float maxX = 2.5f;
+        float minZ = -2.5f;
+        float maxZ = 2.5f;
 
-        //¼ÆËãÔ­Ê¼Íø¸ñ¶ÔÓ¦Ä£¿éCubeµÄ×ø±êµãÀ´Ó³ÉäUV×ø±ê
-
-
-        //Ô­Ê¼Íø¸ñ×ø±êµã
+        //åŸå§‹ç½‘æ ¼åæ ‡ç‚¹
         Vector3 originalA = new Vector3(minX, 0, minZ);
         Vector3 originalB = new Vector3(minX, 0, maxZ);
         Vector3 originalC = new Vector3(maxX, 0, maxZ);
         Vector3 originalD = new Vector3(maxX, 0, minZ);
 
-        //Ä¿±êÍø¸ñ×ø±êµã
+        //ç›®æ ‡ç½‘æ ¼åæ ‡ç‚¹
         Vector3 targetA = new Vector3(posX0, 0, posZ0);
         Vector3 targetB = new Vector3(posX1, 0, posZ1);
         Vector3 targetC = new Vector3(posX2, 0, posZ2);
@@ -123,14 +116,14 @@ public class ModifyMesh : MonoBehaviour
 
         for (int i = 0; i < vertices.Length; i++)
         {
-            // ¼ÆËã¶¥µãÔÚ°üÎ§ºĞÖĞµÄ¹éÒ»»¯×ø±ê
+            // è®¡ç®—é¡¶ç‚¹åœ¨åŒ…å›´ç›’ä¸­çš„å½’ä¸€åŒ–åæ ‡
             float u = Mathf.InverseLerp(minX, maxX, vertices[i].x);
             float v = Mathf.InverseLerp(minZ, maxZ, vertices[i].z);
 
-            // Ê¹ÓÃdouble lerp¼ÆËãĞÂÎ»ÖÃ
+            // ä½¿ç”¨double lerpè®¡ç®—æ–°ä½ç½®
             Vector3 interpolatedPosition = BilinearInterpolation(u, v, targetA, targetB, targetC, targetD);
 
-            // y×ø±ê²»±ä
+            // yåæ ‡ä¸å˜
             interpolatedPosition.y = vertices[i].y * 10f;
 
             vertices[i] = interpolatedPosition;
@@ -142,16 +135,16 @@ public class ModifyMesh : MonoBehaviour
         newMesh.RecalculateBounds();
         newMesh.name = "TestMesh";
 
-        // ĞÂÍø¸ñ¸³¸øÄ¿±êÎïÌå
+        // æ–°ç½‘æ ¼èµ‹ç»™ç›®æ ‡ç‰©ä½“
         transformedMeshFilter.sharedMesh = newMesh;
     }
 
     /// <summary>
-    /// Ë«ÏßĞÔ²åÖµËã·¨
+    /// åŒçº¿æ€§æ’å€¼ç®—æ³•
     /// </summary>
     private Vector3 BilinearInterpolation(float u, float v, Vector3 A, Vector3 B, Vector3 C, Vector3 D)
     {
-        // uv×ø±ê¹éÒ»»¯
+        // uvåæ ‡å½’ä¸€åŒ–
         u = Mathf.Clamp01(u);
         v = Mathf.Clamp01(v);
 
@@ -179,7 +172,7 @@ public class ModifyMesh : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        //ÒÀ´Î»æÖÆËÄ±ßĞÎ¶¥µã
+        //ä¾æ¬¡ç»˜åˆ¶å››è¾¹å½¢é¡¶ç‚¹
         Gizmos.color = Color.yellow;
         foreach (Vector3 var in testMeshData)
         {
