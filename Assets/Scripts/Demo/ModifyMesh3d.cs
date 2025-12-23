@@ -30,7 +30,7 @@ public class ModifyMesh3d : MonoBehaviour
     private List<ModuleData> moduleDatas = new();
 
     /// <summary>
-    /// 生成单个变形模块的接口 - 已优化支持多材质和多子网格
+    /// 生成单个变形模块的接口
     /// </summary>
     public void GetGenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, float height)
     {
@@ -60,6 +60,7 @@ public class ModifyMesh3d : MonoBehaviour
             height = moduleHeight;
         }
 
+        // 准备顶部点
         List<Vector3> bottomNormals = new List<Vector3>();
         for (int i = 0; i < 4; i++)
         {
@@ -76,67 +77,107 @@ public class ModifyMesh3d : MonoBehaviour
         }
 
         Vector3[] originalVerts = originalMesh.vertices;
+        Vector3[] originalNormals = originalMesh.normals;
+        Vector4[] originalTangents = originalMesh.tangents;
 
+        // 基础变换矩阵
         Quaternion sourceRot = sourceModule.transform.localRotation;
         Vector3 sourceScale = sourceModule.transform.localScale;
         Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
 
+        // 预计算烘焙顶点
         Vector3[] bakedVerts = new Vector3[originalVerts.Length];
         for (int i = 0; i < originalVerts.Length; i++)
         {
             bakedVerts[i] = bakeMatrix.MultiplyPoint3x4(originalVerts[i]);
         }
 
+        // 固定边界定义
         Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
         Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
 
+        // 准备新网格数据
         Vector3[] newVerts = new Vector3[bakedVerts.Length];
+        Vector3[] newNormals = new Vector3[originalVerts.Length];
+        Vector4[] newTangents = new Vector4[originalVerts.Length];
+
+        bool hasNormals = originalNormals != null && originalNormals.Length > 0;
+        bool hasTangents = originalTangents != null && originalTangents.Length > 0;
+
+        // 微分步长
+        float delta = 0.001f;
+
         for (int i = 0; i < bakedVerts.Length; i++)
         {
-            Vector3 normalized = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
+            // 获取归一化坐标 (0-1)
+            Vector3 coord = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
 
-            newVerts[i] = TrilinearInterpolation(
-                normalized.x, normalized.z, normalized.y,
-                bottomPoints, topPoints
-            );
+            // 计算当前顶点的新位置
+            newVerts[i] = TrilinearInterpolation(coord.x, coord.z, coord.y, bottomPoints, topPoints);
+
+            if (hasNormals || hasTangents)
+            {
+                // 计算X轴方向
+                Vector3 pRight;
+                if (coord.x < 0.5f)
+                    pRight = (TrilinearInterpolation(coord.x + delta, coord.z, coord.y, bottomPoints, topPoints) - newVerts[i]).normalized;
+                else
+                    pRight = (newVerts[i] - TrilinearInterpolation(coord.x - delta, coord.z, coord.y, bottomPoints, topPoints)).normalized;
+
+                // 计算Z轴方向
+                Vector3 pForward;
+                if (coord.z < 0.5f)
+                    pForward = (TrilinearInterpolation(coord.x, coord.z + delta, coord.y, bottomPoints, topPoints) - newVerts[i]).normalized;
+                else
+                    pForward = (newVerts[i] - TrilinearInterpolation(coord.x, coord.z - delta, coord.y, bottomPoints, topPoints)).normalized;
+
+                // 计算Y轴方向 (W方向的变化/高度方向)
+                Vector3 pUp;
+                if (coord.y < 0.5f)
+                    pUp = (TrilinearInterpolation(coord.x, coord.z, coord.y + delta, bottomPoints, topPoints) - newVerts[i]).normalized;
+                else
+                    pUp = (newVerts[i] - TrilinearInterpolation(coord.x, coord.z, coord.y - delta, bottomPoints, topPoints)).normalized;
+
+                // 应用原始旋转到法线
+                Vector3 rawNormal = sourceRot * originalNormals[i];
+
+                // 将相对朝向投影到新的变形坐标系中
+                Vector3 finalNormal = (pRight * rawNormal.x + pUp * rawNormal.y + pForward * rawNormal.z).normalized;
+                newNormals[i] = finalNormal;
+
+                // 处理切线
+                if (hasTangents)
+                {
+                    Vector3 rawTangentDir = sourceRot * new Vector3(originalTangents[i].x, originalTangents[i].y, originalTangents[i].z);
+                    Vector3 finalTangentDir = (pRight * rawTangentDir.x + pUp * rawTangentDir.y + pForward * rawTangentDir.z).normalized;
+                    newTangents[i] = new Vector4(finalTangentDir.x, finalTangentDir.y, finalTangentDir.z, originalTangents[i].w);
+                }
+            }
         }
 
+        // 构建网格
         Mesh deformedMesh = new Mesh();
         deformedMesh.name = sourceModule.name + "_modified";
         deformedMesh.vertices = newVerts;
         deformedMesh.uv = originalMesh.uv;
 
-        // 复制颜色数据
+        if (hasNormals) deformedMesh.normals = newNormals;
+        if (hasTangents) deformedMesh.tangents = newTangents;
+
+        // 颜色
         if (originalMesh.colors != null && originalMesh.colors.Length > 0)
-        {
             deformedMesh.colors = originalMesh.colors;
-        }
 
-        // 复制切线数据
-        if (originalMesh.tangents != null && originalMesh.tangents.Length > 0)
-        {
-            deformedMesh.tangents = originalMesh.tangents;
-        }
+        // 检查负缩放
+        bool needFlipTriangles = sourceScale.x * sourceScale.y * sourceScale.z < 0;
 
-        // 检查是否需要翻转三角形
-        bool needFlipTriangles = sourceScale.x < 0 || sourceScale.y < 0 || sourceScale.z < 0;
-        if (needFlipTriangles)
-        {
-            Debug.Log($"检测到负缩放: {sourceScale}，将翻转三角形顺序");
-        }
-
-        // 处理多个子网格
-        int subMeshCount = originalMesh.subMeshCount;
-        deformedMesh.subMeshCount = subMeshCount;
-
-        for (int i = 0; i < subMeshCount; i++)
+        // 三角形
+        deformedMesh.subMeshCount = originalMesh.subMeshCount;
+        for (int i = 0; i < originalMesh.subMeshCount; i++)
         {
             int[] triangles = originalMesh.GetTriangles(i);
-
-            // 如果需要翻转三角形
             if (needFlipTriangles)
             {
-                // 翻转每个三角形的顶点顺序
                 for (int j = 0; j < triangles.Length; j += 3)
                 {
                     int temp = triangles[j];
@@ -144,77 +185,20 @@ public class ModifyMesh3d : MonoBehaviour
                     triangles[j + 2] = temp;
                 }
             }
-
             deformedMesh.SetTriangles(triangles, i);
         }
 
-        // 如果原始网格有法线则直接复制，否则重新计算
-        if (originalMesh.normals != null && originalMesh.normals.Length > 0)
-        {
-            Vector3[] originalNormals = originalMesh.normals;
-            Vector3[] newNormals = new Vector3[originalNormals.Length];
-
-            // 将法线从本地空间转换到世界空间
-            for (int i = 0; i < originalNormals.Length; i++)
-            {
-                // 使用原始变换矩阵的逆转置矩阵来正确变换法线
-                Matrix4x4 normalMatrix = bakeMatrix.inverse.transpose;
-                newNormals[i] = normalMatrix.MultiplyVector(originalNormals[i]).normalized;
-            }
-
-            deformedMesh.normals = newNormals;
-        }
-        else
-        {
-            deformedMesh.RecalculateNormals();
-        }
-
-        // 如果需要翻转三角形，翻转切线
-        if (needFlipTriangles && originalMesh.tangents != null && originalMesh.tangents.Length > 0)
-        {
-            Vector4[] originalTangents = originalMesh.tangents;
-            Vector4[] newTangents = new Vector4[originalTangents.Length];
-
-            for (int i = 0; i < originalTangents.Length; i++)
-            {
-                // 变换切线方向
-                Vector3 tangentDir = bakeMatrix.MultiplyVector(new Vector3(
-                    originalTangents[i].x,
-                    originalTangents[i].y,
-                    originalTangents[i].z
-                ));
-
-                // 保持w分量（副切线方向标志）
-                newTangents[i] = new Vector4(
-                    tangentDir.x,
-                    tangentDir.y,
-                    tangentDir.z,
-                    originalTangents[i].w
-                );
-            }
-
-            deformedMesh.tangents = newTangents;
-        }
-        else if (originalMesh.tangents == null || originalMesh.tangents.Length == 0)
-        {
-            deformedMesh.RecalculateTangents();
-        }
+        // 如果原始网格没法线才重算，否则信任上面的计算
+        if (!hasNormals) deformedMesh.RecalculateNormals();
 
         deformedMesh.RecalculateBounds();
 
-        // 查找或创建 ModifiedRoot 节点
+        // 场景对象创建
         GameObject modifiedRoot = GameObject.Find("ModifiedRoot");
-        if (modifiedRoot == null)
-        {
-            modifiedRoot = new GameObject("ModifiedRoot");
-            Debug.Log("创建 ModifiedRoot 节点");
-        }
+        if (modifiedRoot == null) modifiedRoot = new GameObject("ModifiedRoot");
 
         GameObject modifiedObject = new GameObject(sourceModule.name + "_modified");
-
-        // 将新对象设置为 ModifiedRoot 的子对象
         modifiedObject.transform.SetParent(modifiedRoot.transform);
-
         modifiedObject.transform.localPosition = Vector3.zero;
         modifiedObject.transform.localRotation = Quaternion.identity;
         modifiedObject.transform.localScale = Vector3.one;
@@ -223,50 +207,14 @@ public class ModifyMesh3d : MonoBehaviour
         meshFilter.sharedMesh = deformedMesh;
 
         MeshRenderer meshRenderer = modifiedObject.AddComponent<MeshRenderer>();
-
-        //拷贝材质
         MeshRenderer sourceRenderer = sourceModule.GetComponent<MeshRenderer>();
+
         if (sourceRenderer != null && sourceRenderer.sharedMaterials.Length > 0)
-        {
-            Material[] originalMaterials = sourceRenderer.sharedMaterials;
-            Material[] newMaterials = new Material[originalMaterials.Length];
-
-            for (int i = 0; i < originalMaterials.Length; i++)
-            {
-                if (originalMaterials[i] != null)
-                {
-                    newMaterials[i] = originalMaterials[i];
-                }
-                else
-                {
-                    if (defaultMat != null)
-                    {
-                        newMaterials[i] = defaultMat;
-                    }
-                    else
-                    {
-                        newMaterials[i] = new Material(Shader.Find("Standard"));
-                    }
-                }
-            }
-
-            meshRenderer.sharedMaterials = newMaterials;
-        }
+            meshRenderer.sharedMaterials = sourceRenderer.sharedMaterials;
         else
-        {
-            if (defaultMat != null)
-            {
-                meshRenderer.material = defaultMat;
-            }
-            else
-            {
-                meshRenderer.material = new Material(Shader.Find("Standard"));
-            }
-        }
+            meshRenderer.material = defaultMat != null ? defaultMat : new Material(Shader.Find("Standard"));
 
         deformedModules.Add(modifiedObject);
-
-        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质，父节点: {modifiedRoot.name}");
     }
 
     /// <summary>

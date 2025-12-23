@@ -10,6 +10,8 @@ namespace TowerStacker
     {
         //[SerializeField]
         //private Grid grid;
+        [SerializeField]
+        private BuildingSystemBase buildingSystemBase;
 
         [SerializeField]
         private GameObject hintObj;
