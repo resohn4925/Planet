@@ -60,13 +60,14 @@ public class ModifyMesh3d : MonoBehaviour
             height = moduleHeight;
         }
 
-        // 准备顶部点
+        // 准备底部法线
         List<Vector3> bottomNormals = new List<Vector3>();
         for (int i = 0; i < 4; i++)
         {
             bottomNormals.Add(bottomPoints[i].normalized);
         }
 
+        // 准备顶部点
         List<Vector3> topPoints = new List<Vector3>();
         for (int i = 0; i < 4; i++)
         {
@@ -80,104 +81,99 @@ public class ModifyMesh3d : MonoBehaviour
         Vector3[] originalNormals = originalMesh.normals;
         Vector4[] originalTangents = originalMesh.tangents;
 
-        // 基础变换矩阵
+        // 基础变换矩阵，包含缩放
         Quaternion sourceRot = sourceModule.transform.localRotation;
         Vector3 sourceScale = sourceModule.transform.localScale;
+
+        // 顶点变换矩阵
         Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
 
-        // 预计算烘焙顶点
+        // 法线变换矩阵
+        Matrix4x4 normalMatrix = GetNormalMatrix(sourceScale, sourceRot);
+
         Vector3[] bakedVerts = new Vector3[originalVerts.Length];
         for (int i = 0; i < originalVerts.Length; i++)
         {
             bakedVerts[i] = bakeMatrix.MultiplyPoint3x4(originalVerts[i]);
         }
 
-        // 固定边界定义
         Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
         Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
 
-        // 准备新网格数据
         Vector3[] newVerts = new Vector3[bakedVerts.Length];
-        Vector3[] newNormals = new Vector3[originalVerts.Length];
-        Vector4[] newTangents = new Vector4[originalVerts.Length];
-
-        bool hasNormals = originalNormals != null && originalNormals.Length > 0;
-        bool hasTangents = originalTangents != null && originalTangents.Length > 0;
-
-        // 微分步长
-        float delta = 0.001f;
-
         for (int i = 0; i < bakedVerts.Length; i++)
         {
-            // 获取归一化坐标 (0-1)
-            Vector3 coord = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
+            Vector3 normalized = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
 
-            // 计算当前顶点的新位置
-            newVerts[i] = TrilinearInterpolation(coord.x, coord.z, coord.y, bottomPoints, topPoints);
-
-            if (hasNormals || hasTangents)
-            {
-                // 计算X轴方向
-                Vector3 pRight;
-                if (coord.x < 0.5f)
-                    pRight = (TrilinearInterpolation(coord.x + delta, coord.z, coord.y, bottomPoints, topPoints) - newVerts[i]).normalized;
-                else
-                    pRight = (newVerts[i] - TrilinearInterpolation(coord.x - delta, coord.z, coord.y, bottomPoints, topPoints)).normalized;
-
-                // 计算Z轴方向
-                Vector3 pForward;
-                if (coord.z < 0.5f)
-                    pForward = (TrilinearInterpolation(coord.x, coord.z + delta, coord.y, bottomPoints, topPoints) - newVerts[i]).normalized;
-                else
-                    pForward = (newVerts[i] - TrilinearInterpolation(coord.x, coord.z - delta, coord.y, bottomPoints, topPoints)).normalized;
-
-                // 计算Y轴方向 (W方向的变化/高度方向)
-                Vector3 pUp;
-                if (coord.y < 0.5f)
-                    pUp = (TrilinearInterpolation(coord.x, coord.z, coord.y + delta, bottomPoints, topPoints) - newVerts[i]).normalized;
-                else
-                    pUp = (newVerts[i] - TrilinearInterpolation(coord.x, coord.z, coord.y - delta, bottomPoints, topPoints)).normalized;
-
-                // 应用原始旋转到法线
-                Vector3 rawNormal = sourceRot * originalNormals[i];
-
-                // 将相对朝向投影到新的变形坐标系中
-                Vector3 finalNormal = (pRight * rawNormal.x + pUp * rawNormal.y + pForward * rawNormal.z).normalized;
-                newNormals[i] = finalNormal;
-
-                // 处理切线
-                if (hasTangents)
-                {
-                    Vector3 rawTangentDir = sourceRot * new Vector3(originalTangents[i].x, originalTangents[i].y, originalTangents[i].z);
-                    Vector3 finalTangentDir = (pRight * rawTangentDir.x + pUp * rawTangentDir.y + pForward * rawTangentDir.z).normalized;
-                    newTangents[i] = new Vector4(finalTangentDir.x, finalTangentDir.y, finalTangentDir.z, originalTangents[i].w);
-                }
-            }
+            newVerts[i] = TrilinearInterpolation(
+                normalized.x, normalized.z, normalized.y,
+                bottomPoints, topPoints
+            );
         }
 
-        // 构建网格
+        // 计算变形后的法线
+        Vector3[] newNormals = CalculateDeformedNormals(
+            originalVerts, bakedVerts, bottomPoints, topPoints,
+            fixedMin, fixedMax, originalNormals, normalMatrix
+        );
+
+        // 计算变形后的切线
+        Vector4[] newTangents = CalculateDeformedTangents(
+            originalVerts, bakedVerts, bottomPoints, topPoints,
+            fixedMin, fixedMax, originalTangents, normalMatrix
+        );
+
         Mesh deformedMesh = new Mesh();
         deformedMesh.name = sourceModule.name + "_modified";
         deformedMesh.vertices = newVerts;
         deformedMesh.uv = originalMesh.uv;
 
-        if (hasNormals) deformedMesh.normals = newNormals;
-        if (hasTangents) deformedMesh.tangents = newTangents;
+        // 设置法线
+        if (newNormals != null && newNormals.Length > 0)
+        {
+            deformedMesh.normals = newNormals;
+        }
+        else if (originalMesh.normals != null && originalMesh.normals.Length > 0)
+        {
+            deformedMesh.normals = originalMesh.normals;
+        }
 
-        // 颜色
+        // 设置切线
+        if (newTangents != null && newTangents.Length > 0)
+        {
+            deformedMesh.tangents = newTangents;
+        }
+        else if (originalMesh.tangents != null && originalMesh.tangents.Length > 0)
+        {
+            deformedMesh.tangents = originalMesh.tangents;
+        }
+
+        // 复制颜色数据
         if (originalMesh.colors != null && originalMesh.colors.Length > 0)
+        {
             deformedMesh.colors = originalMesh.colors;
+        }
 
-        // 检查负缩放
+        // 处理多个子网格，保留原始材质ID
+        // 检查是否需要翻转三角形
         bool needFlipTriangles = sourceScale.x * sourceScale.y * sourceScale.z < 0;
+        if (needFlipTriangles)
+        {
+            Debug.Log($"检测到负缩放: {sourceScale}，将翻转三角形顺序");
+        }
 
-        // 三角形
-        deformedMesh.subMeshCount = originalMesh.subMeshCount;
-        for (int i = 0; i < originalMesh.subMeshCount; i++)
+        // 处理多个子网格
+        int subMeshCount = originalMesh.subMeshCount;
+        deformedMesh.subMeshCount = subMeshCount;
+
+        for (int i = 0; i < subMeshCount; i++)
         {
             int[] triangles = originalMesh.GetTriangles(i);
+
+            // 如果需要翻转三角形
             if (needFlipTriangles)
             {
+                // 翻转每个三角形的顶点顺序
                 for (int j = 0; j < triangles.Length; j += 3)
                 {
                     int temp = triangles[j];
@@ -185,20 +181,39 @@ public class ModifyMesh3d : MonoBehaviour
                     triangles[j + 2] = temp;
                 }
             }
+
             deformedMesh.SetTriangles(triangles, i);
         }
 
-        // 如果原始网格没法线才重算，否则信任上面的计算
-        if (!hasNormals) deformedMesh.RecalculateNormals();
+        // 如果上面没有设置法线，则重新计算
+        if ((originalNormals == null || originalNormals.Length == 0) &&
+            (newNormals == null || newNormals.Length == 0))
+        {
+            deformedMesh.RecalculateNormals();
+        }
+
+        // 如果上面没有设置切线，则重新计算
+        if ((originalTangents == null || originalTangents.Length == 0) &&
+            (newTangents == null || newTangents.Length == 0))
+        {
+            deformedMesh.RecalculateTangents();
+        }
 
         deformedMesh.RecalculateBounds();
 
-        // 场景对象创建
+        // 查找或创建 ModifiedRoot 节点
         GameObject modifiedRoot = GameObject.Find("ModifiedRoot");
-        if (modifiedRoot == null) modifiedRoot = new GameObject("ModifiedRoot");
+        if (modifiedRoot == null)
+        {
+            modifiedRoot = new GameObject("ModifiedRoot");
+            Debug.Log("创建 ModifiedRoot 节点");
+        }
 
         GameObject modifiedObject = new GameObject(sourceModule.name + "_modified");
+
+        // 将新对象设置为 ModifiedRoot 的子对象
         modifiedObject.transform.SetParent(modifiedRoot.transform);
+
         modifiedObject.transform.localPosition = Vector3.zero;
         modifiedObject.transform.localRotation = Quaternion.identity;
         modifiedObject.transform.localScale = Vector3.one;
@@ -207,14 +222,192 @@ public class ModifyMesh3d : MonoBehaviour
         meshFilter.sharedMesh = deformedMesh;
 
         MeshRenderer meshRenderer = modifiedObject.AddComponent<MeshRenderer>();
-        MeshRenderer sourceRenderer = sourceModule.GetComponent<MeshRenderer>();
 
+        // 拷贝材质
+        MeshRenderer sourceRenderer = sourceModule.GetComponent<MeshRenderer>();
         if (sourceRenderer != null && sourceRenderer.sharedMaterials.Length > 0)
-            meshRenderer.sharedMaterials = sourceRenderer.sharedMaterials;
+        {
+            Material[] originalMaterials = sourceRenderer.sharedMaterials;
+            Material[] newMaterials = new Material[originalMaterials.Length];
+
+            for (int i = 0; i < originalMaterials.Length; i++)
+            {
+                if (originalMaterials[i] != null)
+                {
+                    newMaterials[i] = originalMaterials[i];
+                }
+                else
+                {
+                    if (defaultMat != null)
+                    {
+                        newMaterials[i] = defaultMat;
+                    }
+                    else
+                    {
+                        newMaterials[i] = new Material(Shader.Find("Standard"));
+                    }
+                }
+            }
+
+            meshRenderer.sharedMaterials = newMaterials;
+        }
         else
-            meshRenderer.material = defaultMat != null ? defaultMat : new Material(Shader.Find("Standard"));
+        {
+            if (defaultMat != null)
+            {
+                meshRenderer.material = defaultMat;
+            }
+            else
+            {
+                meshRenderer.material = new Material(Shader.Find("Standard"));
+            }
+        }
 
         deformedModules.Add(modifiedObject);
+
+        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质，父节点: {modifiedRoot.name}");
+    }
+
+    /// <summary>
+    /// 获取法线变换矩阵（逆转置矩阵）
+    /// </summary>
+    private Matrix4x4 GetNormalMatrix(Vector3 scale, Quaternion rotation)
+    {
+        // 创建缩放矩阵
+        Matrix4x4 scaleMatrix = Matrix4x4.Scale(scale);
+
+        // 创建旋转矩阵
+        Matrix4x4 rotationMatrix = Matrix4x4.Rotate(rotation);
+
+        // 组合变换矩阵
+        Matrix4x4 transformMatrix = rotationMatrix * scaleMatrix;
+
+        // 计算逆转置矩阵
+        Matrix4x4 normalMatrix = transformMatrix.inverse.transpose;
+
+        return normalMatrix;
+    }
+
+    /// <summary>
+    /// 计算变形后的法线（使用微分法）
+    /// </summary>
+    private Vector3[] CalculateDeformedNormals(
+        Vector3[] originalVerts, Vector3[] bakedVerts,
+        List<Vector3> bottomPoints, List<Vector3> topPoints,
+        Vector3 fixedMin, Vector3 fixedMax,
+        Vector3[] originalNormals, Matrix4x4 normalMatrix)
+    {
+        if (originalNormals == null || originalNormals.Length == 0)
+            return null;
+
+        Vector3[] newNormals = new Vector3[originalNormals.Length];
+
+        // 微分步长
+        float delta = 0.001f;
+
+        for (int i = 0; i < bakedVerts.Length; i++)
+        {
+            // 获取归一化坐标
+            Vector3 coord = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
+
+            // 计算当前顶点的位置
+            Vector3 currentPos = TrilinearInterpolation(
+                coord.x, coord.z, coord.y,
+                bottomPoints, topPoints
+            );
+
+            // 计算X轴方向（使用前向差分或后向差分）
+            Vector3 pRight;
+            if (coord.x < 0.5f)
+                pRight = (TrilinearInterpolation(coord.x + delta, coord.z, coord.y, bottomPoints, topPoints) - currentPos).normalized;
+            else
+                pRight = (currentPos - TrilinearInterpolation(coord.x - delta, coord.z, coord.y, bottomPoints, topPoints)).normalized;
+
+            // 计算Z轴方向
+            Vector3 pForward;
+            if (coord.z < 0.5f)
+                pForward = (TrilinearInterpolation(coord.x, coord.z + delta, coord.y, bottomPoints, topPoints) - currentPos).normalized;
+            else
+                pForward = (currentPos - TrilinearInterpolation(coord.x, coord.z - delta, coord.y, bottomPoints, topPoints)).normalized;
+
+            // 计算Y轴方向
+            Vector3 pUp;
+            if (coord.y < 0.5f)
+                pUp = (TrilinearInterpolation(coord.x, coord.z, coord.y + delta, bottomPoints, topPoints) - currentPos).normalized;
+            else
+                pUp = (currentPos - TrilinearInterpolation(coord.x, coord.z, coord.y - delta, bottomPoints, topPoints)).normalized;
+
+            // 使用逆转置矩阵正确变换原始法线
+            Vector3 rawNormal = normalMatrix.MultiplyVector(originalNormals[i]).normalized;
+
+            // 将变换后的法线投影到变形后的局部坐标系
+            Vector3 finalNormal = (pRight * rawNormal.x + pUp * rawNormal.y + pForward * rawNormal.z).normalized;
+            newNormals[i] = finalNormal;
+        }
+
+        return newNormals;
+    }
+
+    /// <summary>
+    /// 计算变形后的切线
+    /// </summary>
+    private Vector4[] CalculateDeformedTangents(
+        Vector3[] originalVerts, Vector3[] bakedVerts,
+        List<Vector3> bottomPoints, List<Vector3> topPoints,
+        Vector3 fixedMin, Vector3 fixedMax,
+        Vector4[] originalTangents, Matrix4x4 normalMatrix)
+    {
+        if (originalTangents == null || originalTangents.Length == 0)
+            return null;
+
+        Vector4[] newTangents = new Vector4[originalTangents.Length];
+
+        // 微分步长
+        float delta = 0.001f;
+
+        for (int i = 0; i < bakedVerts.Length; i++)
+        {
+            // 获取归一化坐标
+            Vector3 coord = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
+
+            // 计算当前顶点的位置
+            Vector3 currentPos = TrilinearInterpolation(
+                coord.x, coord.z, coord.y,
+                bottomPoints, topPoints
+            );
+
+            // 计算X轴方向
+            Vector3 pRight;
+            if (coord.x < 0.5f)
+                pRight = (TrilinearInterpolation(coord.x + delta, coord.z, coord.y, bottomPoints, topPoints) - currentPos).normalized;
+            else
+                pRight = (currentPos - TrilinearInterpolation(coord.x - delta, coord.z, coord.y, bottomPoints, topPoints)).normalized;
+
+            // 计算Z轴方向
+            Vector3 pForward;
+            if (coord.z < 0.5f)
+                pForward = (TrilinearInterpolation(coord.x, coord.z + delta, coord.y, bottomPoints, topPoints) - currentPos).normalized;
+            else
+                pForward = (currentPos - TrilinearInterpolation(coord.x, coord.z - delta, coord.y, bottomPoints, topPoints)).normalized;
+
+            // 计算Y轴方向
+            Vector3 pUp;
+            if (coord.y < 0.5f)
+                pUp = (TrilinearInterpolation(coord.x, coord.z, coord.y + delta, bottomPoints, topPoints) - currentPos).normalized;
+            else
+                pUp = (currentPos - TrilinearInterpolation(coord.x, coord.z, coord.y - delta, bottomPoints, topPoints)).normalized;
+
+            // 使用逆转置矩阵正确变换原始切线
+            Vector3 rawTangent = normalMatrix.MultiplyVector(
+                new Vector3(originalTangents[i].x, originalTangents[i].y, originalTangents[i].z)
+            ).normalized;
+
+            // 将变换后的切线投影到变形后的局部坐标系
+            Vector3 finalTangent = (pRight * rawTangent.x + pUp * rawTangent.y + pForward * rawTangent.z).normalized;
+            newTangents[i] = new Vector4(finalTangent.x, finalTangent.y, finalTangent.z, originalTangents[i].w);
+        }
+
+        return newTangents;
     }
 
     /// <summary>
@@ -236,12 +429,8 @@ public class ModifyMesh3d : MonoBehaviour
                 continue;
             }
 
-            GameObject deformedModule = DeformModule(sourceModule, moduleData.bottomVertices, moduleData.topVertices);
-            if (deformedModule != null)
-            {
-                deformedModule.name = $"Deformed_Module_{i}";
-                deformedModules.Add(deformedModule);
-            }
+            // 使用统一的GetGenerateModule方法
+            GetGenerateModule(moduleData.bottomVertices, sourceModule, moduleHeight);
         }
     }
 
@@ -327,71 +516,6 @@ public class ModifyMesh3d : MonoBehaviour
             Vector3 topPos = bottomPos + normal * moduleHeight;
             tPos.Add(topPos);
         }
-    }
-
-    /// <summary>
-    /// 将模型映射到四边形变形体
-    /// </summary>
-    GameObject DeformModule(GameObject sourceModule, List<Vector3> bvs, List<Vector3> tvs)
-    {
-        if (sourceModule == null)
-        {
-            Debug.LogError("源模块为空");
-            return null;
-        }
-
-        MeshFilter sourceFilter = sourceModule.GetComponent<MeshFilter>();
-        if (sourceFilter == null || sourceFilter.sharedMesh == null)
-        {
-            Debug.LogError("源模块没有有效网格");
-            return null;
-        }
-
-        Mesh originalMesh = sourceFilter.sharedMesh;
-        Vector3[] originalVerts = originalMesh.vertices;
-
-        Quaternion sourceRot = sourceModule.transform.localRotation;
-        Vector3 sourceScale = sourceModule.transform.localScale;
-        Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
-
-        Vector3[] bakedVerts = new Vector3[originalVerts.Length];
-        for (int i = 0; i < originalVerts.Length; i++)
-        {
-            bakedVerts[i] = bakeMatrix.MultiplyPoint3x4(originalVerts[i]);
-        }
-
-        Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
-        Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
-
-        Vector3[] newVerts = new Vector3[bakedVerts.Length];
-        for (int i = 0; i < bakedVerts.Length; i++)
-        {
-            Vector3 normalized = NormalizeToFixedBounds(bakedVerts[i], fixedMin, fixedMax);
-            newVerts[i] = TrilinearInterpolation(normalized.x, normalized.z, normalized.y, bvs, tvs);
-        }
-
-        Mesh deformedMesh = new Mesh();
-        deformedMesh.name = "DeformedMesh";
-        deformedMesh.vertices = newVerts;
-        deformedMesh.uv = originalMesh.uv;
-        deformedMesh.triangles = originalMesh.triangles;
-
-        deformedMesh.RecalculateNormals();
-        deformedMesh.RecalculateTangents();
-        deformedMesh.RecalculateBounds();
-
-        GameObject deformedModule = new GameObject();
-        deformedModule.transform.position = Vector3.zero;
-        deformedModule.transform.rotation = Quaternion.identity;
-        deformedModule.transform.localScale = Vector3.one;
-
-        MeshFilter newFilter = deformedModule.AddComponent<MeshFilter>();
-        newFilter.sharedMesh = deformedMesh;
-
-        MeshRenderer newRenderer = deformedModule.AddComponent<MeshRenderer>();
-        newRenderer.material = defaultMat != null ? defaultMat : new Material(Shader.Find("Standard"));
-
-        return deformedModule;
     }
 
     /// <summary>
