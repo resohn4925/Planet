@@ -532,13 +532,13 @@ public class ModifyMesh3d : MonoBehaviour
     }
 
     /// <summary>
-    /// 使用固定边界归一化一个点
+    /// 使用固定边界计算相对坐标
     /// </summary>
     Vector3 NormalizeToFixedBounds(Vector3 point, Vector3 min, Vector3 max)
     {
-        float x = Mathf.InverseLerp(min.x, max.x, point.x);
-        float y = Mathf.InverseLerp(min.y, max.y, point.y);
-        float z = Mathf.InverseLerp(min.z, max.z, point.z);
+        float x = (point.x - min.x) / (max.x - min.x);
+        float y = (point.y - min.y) / (max.y - min.y);
+        float z = (point.z - min.z) / (max.z - min.z);
 
         return new Vector3(x, y, z);
     }
@@ -548,10 +548,6 @@ public class ModifyMesh3d : MonoBehaviour
     /// </summary>
     Vector3 TrilinearInterpolation(float u, float v, float w, List<Vector3> bvs, List<Vector3> tvs)
     {
-        u = Mathf.Clamp01(u);
-        v = Mathf.Clamp01(v);
-        w = Mathf.Clamp01(w);
-
         Vector3 bottomPos = BilinearInterpolation(u, v,
             bvs[0], bvs[1],
             bvs[2], bvs[3]);
@@ -560,7 +556,7 @@ public class ModifyMesh3d : MonoBehaviour
             tvs[0], tvs[1],
             tvs[2], tvs[3]);
 
-        return Vector3.Lerp(bottomPos, topPos, w);
+        return Vector3.LerpUnclamped(bottomPos, topPos, w);
     }
 
     /// <summary>
