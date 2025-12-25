@@ -125,7 +125,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SkyboxTex:
-        m_Texture: {fileID: 8900000, guid: d4c8dc343ae5d4673b7720ffdb1ddf00, type: 3}
+        m_Texture: {fileID: 8900000, guid: beb1457d375110e468b8d8e1f29fccea, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
@@ -218,7 +218,7 @@ Material:
     - _Metallic: 0.48
     - _Mode: 0
     - _NDF: 1
-    - _NormalStrength: 0.15
+    - _NormalStrength: 0.85
     - _OcclusionStrength: 0
     - _Parallax: 0.005
     - _ParallaxCount: 16
