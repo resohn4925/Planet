@@ -18,7 +18,9 @@ namespace Planet
         public int meshSize;
         public float planetRadius;
         public int layers;
-        public int height;
+        public float height;
+        public float heightOffSet;
+
 
         [Header("Debug参数")]
         public int faceIndex;
@@ -126,7 +128,7 @@ namespace Planet
                     Vector3 actualPos = meshData.vertices[vertexIndex];
 
                     // 第一层向内收缩,距离为height/2+地表偏移
-                    Vector3 contractedPos = ExpandPosition(actualPos, -height / 2f - 0.5f);
+                    Vector3 contractedPos = ExpandPosition(actualPos, -height / 2f - heightOffSet);
                     modifyPointPos.Add(contractedPos);
 
                     int mappedX = xIndexMap[originalX];
