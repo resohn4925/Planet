@@ -21,8 +21,9 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Light_Red
-  m_Shader: {fileID: -6465566751694194690, guid: af598b2e4844d2a45810cbcbeb77f650,
-    type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: af598b2e4844d2a45810cbcbeb77f650, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _ENABLE_HDR_CORRECTION
   m_InvalidKeywords:
@@ -34,6 +35,7 @@ Material:
   stringTagMap: {}
   disabledShaderPasses:
   - DepthOnly
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -118,7 +120,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 0.12
+    - _Intensity: 0.4
     - _MaskHeight: 0
     - _Metallic: 0
     - _OcclusionStrength: 1

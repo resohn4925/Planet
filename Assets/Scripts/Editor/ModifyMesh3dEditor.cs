@@ -10,9 +10,9 @@ public class ModifyMesh3dEditor : Editor
 
         ModifyMesh3d generator = (ModifyMesh3d)target;
 
-        if (GUILayout.Button("GenerateModule"))
-        {
-            generator.GenerateModule();
-        }
+        //if (GUILayout.Button("GenerateModule"))
+        //{
+        //    generator.GenerateModule();
+        //}
     }
 }

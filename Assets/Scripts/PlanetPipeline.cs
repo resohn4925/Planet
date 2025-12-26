@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Unity.VisualScripting.Metadata;
 using static UnityEditor.Searcher.SearcherWindow.Alignment;
 using static UnityEngine.Rendering.DebugUI.Table;
 
@@ -33,6 +34,7 @@ namespace Planet
 
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
+        private GameObject modifiedRoot;
 
         #region 初始化
         public void Init()
@@ -51,6 +53,8 @@ namespace Planet
             GenerateMesh();
             InitMarchingData();
 
+            CreateRoot();
+
             SetAllModifyPointDatas();
             SetAllObjPointDatas();
 
@@ -67,6 +71,16 @@ namespace Planet
             marchingCube.InitAllMarchingCubeDatas();
         }
 
+        public void CreateRoot()
+        {
+            modifiedRoot = GameObject.Find("ModifiedRoot");
+            if (modifiedRoot != null)
+            {
+                DestroyImmediate(modifiedRoot);
+            }
+            modifiedRoot = new GameObject("ModifiedRoot");
+            Debug.Log("创建 ModifiedRoot 节点");
+        }
 
         public void SetAllModifyPointDatas()
         {
@@ -82,6 +96,9 @@ namespace Planet
         /// <param name="meshData"></param>
         public void SetAllModifyPointDatas(MeshData meshData)
         {
+            if (columnsPerFace == -2) return;
+            else
+            height = 30f / (columnsPerFace + 2);
             int verNum = meshGenerator.meshNum + 1;
 
             modifyPointPos.Clear();
@@ -271,6 +288,7 @@ namespace Planet
         public void GenerateObj()
         {
             //ActivateObj();
+            CreateRoot();
             ClearAllModules();
             ModifyAllModules();
         }
@@ -362,33 +380,47 @@ namespace Planet
                     continue;
 
                 GameObject targetModuleObj = null;
+                GameObject parentObj = null;
 
                 // 使用当前面的模块实例列表
                 if (i < marchingCubeData.faceModuleInstances.Count)
                 {
-                    targetModuleObj = marchingCubeData.faceModuleInstances[i];
+                    parentObj = marchingCubeData.faceModuleInstances[i];
 
-                    if (targetModuleObj != null)
+                    if (parentObj != null)
                     {
-                        Debug.Log(targetModuleObj.name);
+                        //子对象作为变形模块
+                        foreach (Transform child in parentObj.transform)
+                        {
+                            if (child.CompareTag("CanBeModified"))
+                            {
+                                targetModuleObj = child.gameObject;
+                            }
+                        }
+
+                        GameObject newParentObj = new();
+                        newParentObj.name = parentObj.name + "_modified";
+                        newParentObj.transform.SetParent(modifiedRoot.transform);
+
+                        if (targetModuleObj == null)
+                        {
+                            Debug.LogWarning($"模块索引[{modulePointData.xIndex},{modulePointData.yIndex},{modulePointData.zIndex}] 无对应实例，名称：{modulePointData.moduleName}");
+                            continue;
+                        }
+
+                        Debug.Log($"模块索引{modulePointData.xIndex}{modulePointData.yIndex}{modulePointData.zIndex}，对应物件：{targetModuleObj.name}，位置：{targetModuleObj.transform.position}");
+
+                        modifyPointPos = marchingCubeData.GetModifyPointsAroundModule(
+                            modulePointData.xIndex,
+                            modulePointData.yIndex,
+                            modulePointData.zIndex
+                        );
+
+                        Matrix4x4 worldMatrix = parentObj.transform.localToWorldMatrix * targetModuleObj.transform.localToWorldMatrix;
+
+                        modifyMesh3D.GetGenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
                     }
                 }
-
-                if (targetModuleObj == null)
-                {
-                    Debug.LogWarning($"模块索引[{modulePointData.xIndex},{modulePointData.yIndex},{modulePointData.zIndex}] 无对应实例，名称：{modulePointData.moduleName}");
-                    continue;
-                }
-
-                Debug.Log($"模块索引{modulePointData.xIndex}{modulePointData.yIndex}{modulePointData.zIndex}，对应物件：{targetModuleObj.name}，位置：{targetModuleObj.transform.position}");
-
-                modifyPointPos = marchingCubeData.GetModifyPointsAroundModule(
-                    modulePointData.xIndex,
-                    modulePointData.yIndex,
-                    modulePointData.zIndex
-                );
-
-                modifyMesh3D.GetGenerateModule(modifyPointPos, targetModuleObj, height);
             }
         }
         #endregion

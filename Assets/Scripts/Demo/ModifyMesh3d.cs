@@ -32,7 +32,7 @@ public class ModifyMesh3d : MonoBehaviour
     /// <summary>
     /// 生成单个变形模块的接口
     /// </summary>
-    public void GetGenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, float height)
+    public void GetGenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, GameObject parentModule,float height, Matrix4x4 worldTransform)
     {
         if (sourceModule == null)
         {
@@ -54,6 +54,9 @@ public class ModifyMesh3d : MonoBehaviour
         }
 
         Mesh originalMesh = sourceFilter.sharedMesh;
+        Vector3 worldPosition = worldTransform.GetPosition();
+        Quaternion worldRotation = worldTransform.rotation;
+        Vector3 worldScale = worldTransform.lossyScale;
 
         if (height <= 0)
         {
@@ -82,8 +85,8 @@ public class ModifyMesh3d : MonoBehaviour
         Vector4[] originalTangents = originalMesh.tangents;
 
         // 基础变换矩阵，包含缩放
-        Quaternion sourceRot = sourceModule.transform.localRotation;
-        Vector3 sourceScale = sourceModule.transform.localScale;
+        Quaternion sourceRot = sourceModule.transform.rotation;
+        Vector3 sourceScale = sourceModule.transform.lossyScale;
 
         // 顶点变换矩阵
         Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
@@ -201,18 +204,10 @@ public class ModifyMesh3d : MonoBehaviour
 
         deformedMesh.RecalculateBounds();
 
-        // 查找或创建 ModifiedRoot 节点
-        GameObject modifiedRoot = GameObject.Find("ModifiedRoot");
-        if (modifiedRoot == null)
-        {
-            modifiedRoot = new GameObject("ModifiedRoot");
-            Debug.Log("创建 ModifiedRoot 节点");
-        }
-
         GameObject modifiedObject = new GameObject(sourceModule.name + "_modified");
 
-        // 将新对象设置为 ModifiedRoot 的子对象
-        modifiedObject.transform.SetParent(modifiedRoot.transform);
+        // 将新对象设置为module的子对象
+        modifiedObject.transform.SetParent(parentModule.transform);
 
         modifiedObject.transform.localPosition = Vector3.zero;
         modifiedObject.transform.localRotation = Quaternion.identity;
@@ -265,7 +260,7 @@ public class ModifyMesh3d : MonoBehaviour
 
         deformedModules.Add(modifiedObject);
 
-        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质，父节点: {modifiedRoot.name}");
+        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质");
     }
 
     /// <summary>
@@ -413,26 +408,26 @@ public class ModifyMesh3d : MonoBehaviour
     /// <summary>
     /// 生成一系列变形模块
     /// </summary>
-    public void GenerateModule()
-    {
-        ClearAllModules();
-        GenerateQuad();
+    //public void GenerateModule()
+    //{
+    //    ClearAllModules();
+    //    GenerateQuad();
 
-        for (int i = 0; i < moduleDatas.Count; i++)
-        {
-            ModuleData moduleData = moduleDatas[i];
+    //    for (int i = 0; i < moduleDatas.Count; i++)
+    //    {
+    //        ModuleData moduleData = moduleDatas[i];
 
-            GameObject sourceModule = i < moduleList.Count ? moduleList[i] : targetModule;
-            if (sourceModule == null)
-            {
-                Debug.LogWarning($"模块{i}没有对应的预制体，跳过");
-                continue;
-            }
+    //        GameObject sourceModule = i < moduleList.Count ? moduleList[i] : targetModule;
+    //        if (sourceModule == null)
+    //        {
+    //            Debug.LogWarning($"模块{i}没有对应的预制体，跳过");
+    //            continue;
+    //        }
 
-            // 使用统一的GetGenerateModule方法
-            GetGenerateModule(moduleData.bottomVertices, sourceModule, moduleHeight);
-        }
-    }
+    //        // 使用统一的GetGenerateModule方法
+    //        GetGenerateModule(moduleData.bottomVertices, sourceModule, moduleHeight);
+    //    }
+    //}
 
     private void GenerateQuad()
     {
