@@ -32,6 +32,9 @@ namespace Planet
         public bool showVerts;
         public bool showMeshs;
 
+        [Header("Prefab")]
+        public GameObject light;
+
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
         private GameObject modifiedRoot;
@@ -98,7 +101,7 @@ namespace Planet
         {
             if (columnsPerFace == -2) return;
             else
-            height = 30f / (columnsPerFace + 2);
+            height = 40f / (columnsPerFace + 2);
             int verNum = meshGenerator.meshNum + 1;
 
             modifyPointPos.Clear();
@@ -261,7 +264,7 @@ namespace Planet
                     modifyPointDatas.Add(layerData);
                 }
 
-                Debug.Log($"生成了第{layerIndex}层的{baseLayerData.Count}个点");
+                //Debug.Log($"生成了第{layerIndex}层的{baseLayerData.Count}个点");
             }
         }
 
@@ -287,7 +290,6 @@ namespace Planet
         /// </summary>
         public void GenerateObj()
         {
-            //ActivateObj();
             CreateRoot();
             ClearAllModules();
             ModifyAllModules();
@@ -295,9 +297,6 @@ namespace Planet
 
         public void ActivateObj()
         {
-            //生成obj进行原型测试
-            //marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex, activeObjYIndex, activeObjZIndex].isActive = true;
-
             SetOverlapPoint();
         }
 
@@ -365,7 +364,7 @@ namespace Planet
         public void ModifyModule(MarchingCube.MarchingCubeData marchingCubeData)
         {
             List<Vector3> modifyPointPos = new();
-
+            List<Vector3> cannotBeModified_Light_posList = new();
             marchingCube.UpdateModules(marchingCubeData);
 
             // 获取所有module
@@ -382,6 +381,8 @@ namespace Planet
                 GameObject targetModuleObj = null;
                 GameObject parentObj = null;
 
+                cannotBeModified_Light_posList.Clear();
+
                 // 使用当前面的模块实例列表
                 if (i < marchingCubeData.faceModuleInstances.Count)
                 {
@@ -395,6 +396,11 @@ namespace Planet
                             if (child.CompareTag("CanBeModified"))
                             {
                                 targetModuleObj = child.gameObject;
+                            }
+
+                            if (child.CompareTag("CannotBeModified_Light"))
+                            {
+                                cannotBeModified_Light_posList.Add(child.localPosition);
                             }
                         }
 
@@ -417,8 +423,24 @@ namespace Planet
                         );
 
                         Matrix4x4 worldMatrix = parentObj.transform.localToWorldMatrix * targetModuleObj.transform.localToWorldMatrix;
+                        modifyMesh3D.GenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
 
-                        modifyMesh3D.GetGenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
+
+
+                        int lightIndex = 0;
+                        foreach (var pos in cannotBeModified_Light_posList)
+                        {
+                            //Vector3 testPos = new Vector3(-2.5f, 0, 2.5f);
+                            Quaternion rotation = parentObj.transform.rotation;
+                            Vector3 modifiedPos = rotation * pos;
+                            Vector3 lightModifiedPos = modifyMesh3D.GetDeformedPoint(modifiedPos, modifyPointPos, height);
+
+                            GameObject lightModified = Instantiate(light);
+                            lightModified.name = "Light_" + lightIndex + "_modified";
+                            lightModified.transform.position = lightModifiedPos;
+                            lightModified.transform.SetParent(newParentObj.transform);
+                            lightIndex++;
+                        }
                     }
                 }
             }

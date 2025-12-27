@@ -32,7 +32,7 @@ public class ModifyMesh3d : MonoBehaviour
     /// <summary>
     /// 生成单个变形模块的接口
     /// </summary>
-    public void GetGenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, GameObject parentModule,float height, Matrix4x4 worldTransform)
+    public void GenerateModule(List<Vector3> bottomPoints, GameObject sourceModule, GameObject parentModule, float height, Matrix4x4 worldTransform)
     {
         if (sourceModule == null)
         {
@@ -261,6 +261,69 @@ public class ModifyMesh3d : MonoBehaviour
         deformedModules.Add(modifiedObject);
 
         Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质");
+    }
+
+    /// <summary>
+    /// 输入初始点 + 底部控制点 + 高度，返回变形后的位置
+    /// </summary>
+    /// <param name="initialPoint">初始点的局部坐标（注意：如果原模型有旋转缩放，这里传入的点应当是经过旋转缩放处理后的点）</param>
+    /// <param name="modifyPointPos">底部4个控制点的列表</param>
+    /// <param name="height">变形模块的高度</param>
+    /// <returns>变形后的局部坐标</returns>
+    public Vector3 GetDeformedPoint(Vector3 initialPoint, List<Vector3> modifyPointPos, float height)
+    {
+        // 1. 安全检查
+        if (modifyPointPos == null || modifyPointPos.Count < 4)
+        {
+            Debug.LogError("底部控制点不足4个，无法计算变形");
+            return initialPoint;
+        }
+
+        // 2. 自动根据底部点和高度，推算顶部点 (Top Vertices)
+        // 逻辑需严格保持与 GenerateModule 一致：沿径向向外挤出
+        List<Vector3> calculatedTopPoints = new List<Vector3>();
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 bottomPos = modifyPointPos[i];
+            // 原代码逻辑：法线是坐标归一化（适用于球心在原点的情况）
+            Vector3 normal = bottomPos.normalized;
+            Vector3 topPos = bottomPos + normal * height;
+            calculatedTopPoints.Add(topPos);
+        }
+
+        // 3. 归一化初始点 (Normalize)
+        // 将点映射到 FixedBoundSize 定义的 0~1 空间
+        Vector3 fixedMin = Vector3.zero - new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
+        Vector3 fixedMax = Vector3.zero + new Vector3(fixedBoundSize / 2f, fixedBoundSize / 2f, fixedBoundSize / 2f);
+
+        Vector3 normalized = NormalizeToFixedBounds(initialPoint, fixedMin, fixedMax);
+
+        // 4. 三线性插值计算结果
+        // 注意参数顺序：X -> u, Z -> v, Y -> w (高度)
+        return TrilinearInterpolation(
+            normalized.x,
+            normalized.z,
+            normalized.y,
+            modifyPointPos,
+            calculatedTopPoints
+        );
+    }
+
+    /// <summary>
+    /// 【推荐】输入原始网格顶点 + 原始Transform + 底部控制点 + 高度，返回变形后位置
+    /// </summary>
+    public Vector3 GetDeformedPointWithTransform(Vector3 rawMeshVertex, Transform sourceTransform, List<Vector3> modifyPointPos, float height)
+    {
+        // 1. 先进行“烘焙”变换 (Bake Transform)
+        // 将原始网格点 乘以 缩放和旋转，转换到“固定包围盒”空间
+        Quaternion sourceRot = sourceTransform.rotation;
+        Vector3 sourceScale = sourceTransform.lossyScale;
+        Matrix4x4 bakeMatrix = Matrix4x4.TRS(Vector3.zero, sourceRot, sourceScale);
+
+        Vector3 bakedPoint = bakeMatrix.MultiplyPoint3x4(rawMeshVertex);
+
+        // 2. 调用上面的基础方法计算
+        return GetDeformedPoint(bakedPoint, modifyPointPos, height);
     }
 
     /// <summary>
