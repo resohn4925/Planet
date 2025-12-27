@@ -6,6 +6,7 @@ TagManager:
   tags:
   - CanBeModified
   - CannotBeModified
+  - CannotBeModified_Light
   layers:
   - Default
   - TransparentFX

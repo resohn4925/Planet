@@ -120,7 +120,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 0.4
+    - _Intensity: 8
     - _MaskHeight: 0
     - _Metallic: 0
     - _OcclusionStrength: 1
@@ -128,7 +128,7 @@ Material:
     - _QueueControl: 0
     - _QueueOffset: 0
     - _RampOffset: 0
-    - _RampPower: 1
+    - _RampPower: 1.58
     - _RampSmooth: 0.149
     - _ReceiveShadows: 1
     - _Scattering: 0
