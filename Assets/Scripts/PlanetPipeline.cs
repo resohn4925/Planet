@@ -425,12 +425,9 @@ namespace Planet
                         Matrix4x4 worldMatrix = parentObj.transform.localToWorldMatrix * targetModuleObj.transform.localToWorldMatrix;
                         modifyMesh3D.GenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
 
-
-
                         int lightIndex = 0;
                         foreach (var pos in cannotBeModified_Light_posList)
                         {
-                            //Vector3 testPos = new Vector3(-2.5f, 0, 2.5f);
                             Quaternion rotation = parentObj.transform.rotation;
                             Vector3 modifiedPos = rotation * pos;
                             Vector3 lightModifiedPos = modifyMesh3D.GetDeformedPoint(modifiedPos, modifyPointPos, height);
