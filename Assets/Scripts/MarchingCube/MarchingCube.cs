@@ -900,6 +900,7 @@ public class MarchingCube : MonoBehaviour
 
         public class ModulePointData
         {
+            //type
             public int xIndex;
             public int yIndex;
             public int zIndex;
