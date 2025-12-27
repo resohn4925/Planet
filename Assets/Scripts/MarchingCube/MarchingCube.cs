@@ -1,3 +1,4 @@
+using Enum;
 using QFramework;
 using System.Collections.Generic;
 using TowerStacker;
@@ -810,6 +811,9 @@ public class MarchingCube : MonoBehaviour
         public float sphereRadius;
         public float moduleHeight;
 
+
+            
+        //Model
         public ObjPointData[,,] objPointArray;
 
         public List<ObjPointData> objPointDatas = new List<ObjPointData>();
@@ -833,6 +837,8 @@ public class MarchingCube : MonoBehaviour
 
         public class ObjPointData
         {
+            public BuildingType type;
+            public Face face;
             public int xIndex;
             public int yIndex;
             public int zIndex;

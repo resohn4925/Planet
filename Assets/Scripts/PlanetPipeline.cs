@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using Enum;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Utility;
 using static Unity.VisualScripting.Metadata;
 using static UnityEditor.Searcher.SearcherWindow.Alignment;
 using static UnityEngine.Rendering.DebugUI.Table;
@@ -299,6 +301,20 @@ namespace Planet
         {
             SetOverlapPoint();
         }
+
+        //需要约定faceIndex=几
+        public void OnClick(int xIndex, int yIndex,int zIndex,Face faceIndex,BuildingType type)
+        {
+            //共用逻辑
+            marchingCube.marchingCubeDatas[(int)faceIndex].objPointArray[xIndex,yIndex, zIndex].isActive=true;
+            //美术逻辑
+            //计算出因为新建筑而生成的桥梁点
+            List<Vector3> bridgePoint=UCalculate.CalculateBridge(new Vector3(xIndex,yIndex,zIndex),faceIndex,this.marchingCube.marchingCubeDatas.ToArray(),3);
+            //计分逻辑
+            
+           
+        }
+
 
         /// <summary>
         /// 设置所有重合点的信息
