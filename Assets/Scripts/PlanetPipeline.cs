@@ -73,7 +73,7 @@ namespace Planet
 
         public void InitMarchingData()
         {
-            marchingCube.InitAllMarchingCubeDatas();
+            marchingCube.InitAllMarchingCubeDatas(6);
         }
 
         public void CreateRoot()
@@ -286,6 +286,17 @@ namespace Planet
         }
         #endregion
 
+        public void Load()
+        {
+            marchingCube.LoadTerrainData();
+            GenerateObj();
+        }
+
+        public void Save()
+        {
+            marchingCube.SaveTerrainData();
+        }
+
         #region 模块生成
         /// <summary>
         /// 生成测试模块
@@ -442,6 +453,8 @@ namespace Planet
                         modifyMesh3D.GenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
 
                         int lightIndex = 0;
+
+                        //生成灯光obj
                         foreach (var pos in cannotBeModified_Light_posList)
                         {
                             Quaternion rotation = parentObj.transform.rotation;

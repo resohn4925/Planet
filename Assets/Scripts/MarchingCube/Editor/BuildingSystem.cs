@@ -25,6 +25,9 @@ public class BuildingSystem : EditorWindow
     private GameObject rootObj;
 
     [SerializeField]
+    private BuildingSystemBase buildingSystemBase;
+
+    [SerializeField]
     private MarchingCube marchingCube;
 
     [SerializeField]
@@ -72,6 +75,8 @@ public class BuildingSystem : EditorWindow
         hintObjSlope = (GameObject)EditorGUILayout.ObjectField("HintObjSlope", hintObjSlope, typeof(GameObject), false);
 
         mesh = (GameObject)EditorGUILayout.ObjectField("Mesh", mesh, typeof(GameObject), false);
+
+        buildingSystemBase = (BuildingSystemBase)EditorGUILayout.ObjectField("BuildingSystemBase", buildingSystemBase, typeof(BuildingSystemBase), true);
 
         marchingCube = (MarchingCube)EditorGUILayout.ObjectField("MarchingCube", marchingCube, typeof(MarchingCube), true);
 
@@ -175,11 +180,6 @@ public class BuildingSystem : EditorWindow
             }
         }
 
-        if (GUILayout.Button("网格变形", GUILayout.Height(30)))
-        {
-            marchingCube.ApplyModifyMesh();
-        }
-
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox("Left Click: Place Object\nRight Click: Exit Placement Mode", MessageType.Info);
     }
@@ -187,37 +187,6 @@ public class BuildingSystem : EditorWindow
     private void OnEnable()
     {
         SceneView.duringSceneGui += OnSceneGUI;
-
-        if (marchingCube == null)
-        {
-            TryFindMarchingCube();
-        }
-
-        if (marchingCube != null && marchingCube.marchingCubeData == null)
-        {
-            DefaultSetting();//此处本应读取marchingcube中的数据，先用默认设置代替
-            rootObj = GameObject.Find("Root");
-            if (rootObj != null)
-            {
-                DestroyImmediate(rootObj);
-                rootObj = new GameObject("Root");
-                rootObj.transform.position = Vector3.zero;
-            }
-
-            SetData();//初始化
-            marchingCube.Init();
-        }
-    }
-
-    private bool TryFindMarchingCube()
-    {
-        marchingCube = FindObjectOfType<MarchingCube>();
-        if (marchingCube != null)
-        {
-            return true;
-        }
-
-        return false;
     }
 
     private void OnDisable()
@@ -288,6 +257,29 @@ public class BuildingSystem : EditorWindow
         }
     }
 
+    #region 初始化
+    private void Init()
+    {
+        if (marchingCube != null && marchingCube.marchingCubeDatas == null)
+        {
+            DefaultSetting();
+            rootObj = GameObject.Find("Root");
+            if (rootObj != null)
+            {
+                DestroyImmediate(rootObj);
+                rootObj = new GameObject("Root");
+                rootObj.transform.position = Vector3.zero;
+            }
+
+            SetData();
+            marchingCube.InitAllMarchingCubeDatas(0);
+        }
+
+        marchingCube.moduleCollection = rootObj;
+
+        buildingSystemBase.SetMarchingCube(marchingCube);//marchingcube设置数据完毕后，传入buildingSystemBase
+    }
+
     private void SetData()
     {
         if (marchingCube == null) return;
@@ -298,22 +290,9 @@ public class BuildingSystem : EditorWindow
         marchingCube.spacing = spacing;
         marchingCube.moduleCollection = rootObj;
     }
+    #endregion
 
-    private void ReadData()
-    {
-        modulePath = marchingCube.modulePath;
-        rows = marchingCube.rows;
-        layers = marchingCube.layers;
-        columns = marchingCube.columns;
-        spacing = marchingCube.spacing;
-    }
-
-    private void ResetModule()
-    {
-        modulePath = "Assets/Resources/Prefabs/Modules3d_Terrain";
-        marchingCube.modulePath = modulePath;
-    }
-
+    #region 配置
     private void DefaultSetting()
     {
         string hintPath = "Assets/Resources/Prefabs/Template/HintObj.prefab";
@@ -348,16 +327,32 @@ public class BuildingSystem : EditorWindow
         }
 
         FindOrCreateMarchingCube();
+        FindOrCreateBuildingSystemBase();
 
         ReadData();
-
         currentLayers = 1;
+
         marchingCube.moduleCollection = rootObj;
 
         Repaint();
     }
 
-    private void FindOrCreateMarchingCube()
+    private void ResetModule()
+    {
+        modulePath = "Assets/Resources/Prefabs/Modules_Building_Yoka";
+        marchingCube.modulePath = modulePath;
+    }
+
+    private void ReadData()
+    {
+        modulePath = marchingCube.modulePath;
+        rows = marchingCube.rows;
+        layers = marchingCube.layers;
+        columns = marchingCube.columns;
+        spacing = marchingCube.spacing;
+    }
+
+    public void FindOrCreateMarchingCube()
     {
         GameObject mcGameObject = GameObject.Find("MarchingCube");
 
@@ -377,24 +372,31 @@ public class BuildingSystem : EditorWindow
         }
     }
 
-    private void Init()
+    public void FindOrCreateBuildingSystemBase()
     {
-        SetData();
+        GameObject bsbGameObject = GameObject.Find("BuildingSystemBase");
 
-        rootObj = GameObject.Find("Root");
-        if (rootObj != null)
+        if (bsbGameObject != null)
         {
-            DestroyImmediate(rootObj);
-            rootObj = new GameObject("Root");
-            rootObj.transform.position = Vector3.zero;
+            buildingSystemBase = bsbGameObject.GetComponent<BuildingSystemBase>();
+            if (buildingSystemBase == null)
+            {
+                buildingSystemBase = bsbGameObject.AddComponent<BuildingSystemBase>();
+            }
         }
-        marchingCube.moduleCollection = rootObj;
-
-        marchingCube.Init();
+        else
+        {
+            GameObject newBSB = new GameObject("BuildingSystemBase");
+            buildingSystemBase = newBSB.AddComponent<BuildingSystemBase>();
+            newBSB.transform.position = Vector3.zero;
+        }
     }
+    #endregion
 
     private void ShowHint(Vector3 pos)
     {
+        buildingSystemBase.ShowHint(false);
+
         if (spacing == 0)
             return;
         float posX = (Mathf.Floor(pos.x / spacing) + 0.5f) * spacing;
@@ -478,7 +480,7 @@ public class BuildingSystem : EditorWindow
                 {
                     if (marchingCube.marchingCubeData == null)
                     {
-                        Debug.LogError("请先初始化!");
+                        Debug.LogWarning("请先初始化");
                         return;
                     }
                     if (marchingCube.marchingCubeData.objPointArray != null &&
