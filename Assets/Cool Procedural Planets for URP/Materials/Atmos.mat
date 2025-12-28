@@ -99,14 +99,14 @@ Material:
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BorderBrightness: 18.9
-    - _Brightness: 2
+    - _Brightness: 8
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
     - _CloddDisplace: 1.07
     - _CloudLacenarity: 6.85
     - _CloudSize: 0.41
-    - _Cloudpersistence: -0.03
+    - _Cloudpersistence: 0.03
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
