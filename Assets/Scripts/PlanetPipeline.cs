@@ -40,6 +40,7 @@ namespace Planet
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
         private GameObject modifiedRoot;
+        private GameObject root;
 
         #region 初始化
         public void Init()
@@ -59,6 +60,7 @@ namespace Planet
             InitMarchingData();
 
             CreateRoot();
+            CreateModifiedRoot();
 
             SetAllModifyPointDatas();
             SetAllObjPointDatas();
@@ -78,12 +80,26 @@ namespace Planet
 
         public void CreateRoot()
         {
+            root = GameObject.Find("Root");
+            if (root != null)
+            {
+                DestroyImmediate(root);
+            }
+            root = new GameObject("Root");
+            marchingCube.moduleCollection = root;
+
+            Debug.Log("创建 Root 节点");
+        }
+
+        public void CreateModifiedRoot()
+        {
             modifiedRoot = GameObject.Find("ModifiedRoot");
             if (modifiedRoot != null)
             {
                 DestroyImmediate(modifiedRoot);
             }
             modifiedRoot = new GameObject("ModifiedRoot");
+
             Debug.Log("创建 ModifiedRoot 节点");
         }
 
@@ -303,7 +319,7 @@ namespace Planet
         /// </summary>
         public void GenerateObj()
         {
-            CreateRoot();
+            CreateModifiedRoot();
             ClearAllModules();
             ModifyAllModules();
         }
@@ -476,6 +492,13 @@ namespace Planet
         public void ShowDebug()
         {
             meshGenerator.ShowDebug();
+            foreach (var data in marchingCube.marchingCubeDatas)
+            {
+                Debug.Log(data.objPointArray[0, 0, 0].isActive);
+                //Debug.Log(data.objPointArray[7, 0, 0].isActive);
+                Debug.Log(data.objPointArray[0, 7, 0].isActive);
+            }
+
         }
 
         public void ShowGeometry()

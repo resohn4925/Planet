@@ -165,9 +165,9 @@ public class MarchingCube : MonoBehaviour
             MarchingCubeData currentCubeData = marchingCubeDatas[faceIndex];
 
             int index = 0;
-            for (int x = 0; x < rows; x++)
+            for (int x = 0; x < rows + 2; x++)
             {
-                for (int z = 0; z < columns; z++)
+                for (int z = 0; z < columns + 2; z++)
                 {
                     for (int y = 0; y < layers; y++)
                     {
@@ -209,9 +209,9 @@ public class MarchingCube : MonoBehaviour
             MarchingCubeData currentCubeData = marchingCubeDatas[faceIndex];
             FaceData faceData = new FaceData();
 
-            for (int x = 0; x < rows; x++)
+            for (int x = 0; x < rows + 2; x++)
             {
-                for (int z = 0; z < columns; z++)
+                for (int z = 0; z < columns + 2; z++)
                 {
                     for (int y = 0; y < layers; y++)
                     {

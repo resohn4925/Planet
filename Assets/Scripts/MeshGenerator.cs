@@ -237,7 +237,6 @@ public class MeshGenerator : MonoBehaviour
 
     public void ShowDebug()
     {
-        Debug.Log(meshDataList[0].GetModifiedPointFinalPosition(2, 2, meshNum));//打印变形后第x,y个点的位置
     }
 
 }
