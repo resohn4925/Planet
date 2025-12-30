@@ -46,17 +46,10 @@ public class BuildingSystem : EditorWindow
     private bool isEditing = false;
 
     private EditMode editMode;
-
     //斜坡朝向
     private string selectedOption;
-
-    //临时变量
-    private Vector3 lastGridPos = new Vector3Int(-1, -1, -1);
-    private const float GRID_THRESHOLD = 0.05f;
-    private GameObject currentHint;
-    private GameObject currentMesh;
-
-    private TerrainDataSO currentTerrainData;
+    private GameObject lastHitObj = null;
+    private GameObject currentHitObj = null;
 
     [MenuItem("Tools/Building System")]
     public static void OpenWindow()
@@ -214,11 +207,35 @@ public class BuildingSystem : EditorWindow
         Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
         RaycastHit hit;
 
+        // 获取鼠标悬停的module所在obj索引
         if (Physics.Raycast(ray, out hit))
         {
-            GameObject hitObj = hit.collider.gameObject;
-            buildingSystemBase.GetHittedObj(hitObj);
+            currentHitObj = hit.collider.gameObject;
+            buildingSystemBase.GenerateHittedObj(currentHitObj);
+            buildingSystemBase.UpdateHintMesh(currentHitObj, true);
+
+            if (e.type == EventType.MouseDown && e.button == 0)
+            {
+                //获取currentHitObj的索引，根据索引激活基础obj
+                CreateModule();
+                e.Use();
+            }
         }
+
+        // 检测鼠标移出事件
+        if (lastHitObj != null && (currentHitObj == null || currentHitObj != lastHitObj))
+        {
+            OnMouseExitHitObj(lastHitObj);
+        }
+
+        lastHitObj = currentHitObj;
+    }
+
+    private void OnMouseExitHitObj(GameObject exitedObj)
+    {
+        Debug.Log($"鼠标移出了对象: {exitedObj.name}");
+
+        buildingSystemBase.UpdateHintMesh(exitedObj, false);
     }
 
     #region 初始化
@@ -240,9 +257,17 @@ public class BuildingSystem : EditorWindow
         marchingCube.InitAllMarchingCubeDatas(1);
         marchingCube.moduleCollection = rootObj;
 
-        buildingSystemBase.SetMarchingCubeData(marchingCube);//marchingcube设置数据完毕后，传入buildingSystemBase
-        buildingSystemBase.InitMarchingCubeHintObj(marchingCube);
+        DataDebug();
     }
+
+    public void DataDebug()
+    {
+        //marchingCube.marchingCubeDatas[0].objPointArray[0, 0, 0].isActive = true;
+        //marchingCube.UpdateModules(marchingCube.marchingCubeDatas[0]);
+
+        //marchingCube.ClearFaceHintInstances(marchingCube.marchingCubeDatas[0]);
+    }
+
 
     private void SetData()
     {
@@ -357,19 +382,11 @@ public class BuildingSystem : EditorWindow
     }
     #endregion
 
-    private void ShowHint(Vector3 pos)
+    private void CreateModule()
     {
-        //buildingSystemBase.ShowHint(false);
-    }
-
-    private void CreateModule(Vector3 pos)
-    {
-
-    }
-    
-    private void DestroyModule(Vector3 pos)
-    {
-        
+        buildingSystemBase.CreateModule(marchingCube, currentHitObj);
+        UpdateHint();
+        buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
     }
 
     private void StartEditing()
@@ -384,25 +401,19 @@ public class BuildingSystem : EditorWindow
         }
 
         //表现层,展示所有可建造的地块
+        UpdateHint();
+        buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+    }
 
-        //buildingSystemBase.ShowAllHint();
+    public void UpdateHint()
+    {
+        buildingSystemBase.CalculateHint(marchingCube);
+        marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
     }
 
     private void StopEditing()
     {
         isEditing = false;
-
-        if (currentHint != null)
-        {
-            DestroyImmediate(currentHint);
-            currentHint = null;
-        }
-
-        if (currentMesh != null)
-        {
-            DestroyImmediate(currentMesh);
-            currentMesh = null;
-        }
 
         Repaint();
 
@@ -410,5 +421,7 @@ public class BuildingSystem : EditorWindow
         {
             sceneView.Repaint();
         }
+
+        marchingCube.ClearAllHintInstances();
     }
 }

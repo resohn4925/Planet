@@ -11,10 +11,14 @@ public class BuildingSystemBase : MonoBehaviour
 {
     private float moduleHeight = 0f;
 
-    private MarchingCube marchingCube = new();
-    private MarchingCube marchingCubeHintObj;
+    public string modulePath;
 
     public GameObject root;
+
+    public List<GameObject> moduleList;
+
+    //ä¸´æ—¶å˜é‡ï¼Œè®°å½•æ‰€æœ‰å¯æ”¾ç½®ç‚¹çš„ç´¢å¼•å’Œæ¿€æ´»çŠ¶æ€
+    private MarchingCube.MarchingCubeData.ObjPointData[,,] objPointArrayCurrent;
 
     #region DataSetting
 
@@ -22,92 +26,95 @@ public class BuildingSystemBase : MonoBehaviour
     {
         moduleHeight = height;
     }
-
-    public void SetMarchingCubeData(MarchingCube marchingCube)
-    {
-        this.marchingCube = marchingCube;
-    }
-
-    public void InitMarchingCubeHintObj(MarchingCube marchingCube)
-    {
-        marchingCubeHintObj = new();
-
-        marchingCubeHintObj.modulePath = marchingCube.modulePath;
-        marchingCubeHintObj.rows = marchingCube.rows;
-        marchingCubeHintObj.layers = marchingCube.layers;
-        marchingCubeHintObj.columns = marchingCube.columns;
-        marchingCubeHintObj.spacing = marchingCube.spacing;
-        marchingCubeHintObj.moduleCollection = root;
-
-        marchingCubeHintObj.InitAllMarchingCubeDatas(1);
-
-        marchingCubeHintObj.marchingCubeDatas[0].objPointArray[1, 1, 0].isActive = true;
-        Debug.Log(marchingCubeHintObj.marchingCubeDatas[0].objPointArray[0, 0, 0].isActive);
-        marchingCubeHintObj.UpdateModules(marchingCubeHintObj.marchingCubeDatas[0]);
-    }
-
-    public void DataDebug()
-    {
-
-    }
     #endregion
 
-    #region ±íÏÖ²ã
+    #region è¡¨ç°å±‚
     /// <summary>
-    /// ¼ÆËã¿É·ÅÖÃµÄÎ»ÖÃ
+    /// è®¡ç®—å¯æ”¾ç½®çš„ä½ç½®
     /// </summary>
-    public void CalculateHint()
+    public void CalculateHint(MarchingCube marchingCube)
     {
-        int rows = marchingCube.rows;
-        int columns = marchingCube.columns;
-        int layers = marchingCube.layers;
+        //æ ¹æ®objæ¿€æ´»æƒ…å†µæ¿€æ´»hintobj
+        //marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
+        //æ¿€æ´»ä¸€å±‚æ‰€æœ‰ç‰©ä½“
+        int xSize = marchingCube.marchingCubeDatas[0].hintObjPointArray.GetLength(0);
+        int ySize = marchingCube.marchingCubeDatas[0].hintObjPointArray.GetLength(1);
+        int zSize = marchingCube.marchingCubeDatas[0].hintObjPointArray.GetLength(2);
 
-        List<(MarchingCube.MarchingCubeData cubeData, MarchingCube.MarchingCubeData.ObjPointData objPoint)> activatablePoints = new();
+        for (int x = 0; x < xSize; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                marchingCube.marchingCubeDatas[0].hintObjPointArray[x, y, 0].isActive = true;
+            }
+        }
+    }
 
-        Vector3Int[] neighborOffsets = new Vector3Int[]
-{
-        new Vector3Int(1, 0, 0),   // x+1
-        new Vector3Int(-1, 0, 0),  // x-1
-        new Vector3Int(0, 1, 0),   // z+1
-        new Vector3Int(0, -1, 0),  // z-1
-        new Vector3Int(0, 0, 1),   // y+1
-        new Vector3Int(0, 0, -1)   // y-1
-};
-
-
+    public void ResetHint(MarchingCube marchingCube)
+    {
+        //åˆå§‹åŒ–hintobj
+        foreach (var datas in marchingCube.marchingCubeDatas)
+        {
+            foreach (var data in datas.hintObjPointArray)
+            {
+                data.isActive = false;
+            }
+        }
+        marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
     }
 
     /// <summary>
-    /// ¶¥µãË÷ÒıÊÇ·ñÔ½½ç
+    /// æ ¹æ®å‡»ä¸­çš„ç‰©ä½“çš„ç´¢å¼•ç”ŸæˆåŸºç¡€obj
     /// </summary>
-    /// <returns></returns>
-    public bool IsPointOutOfRange()
+    public GameObject GenerateHittedObj(GameObject hittedObj)
     {
-        return false;
-    }
-
-
-
-    /// <summary>
-    /// ·µ»Ø±»ÉäÏß»÷ÖĞµÄÎïÌåµÄË÷Òı
-    /// </summary>
-    public GameObject GetHittedObj(GameObject hittedObj)
-    {
-        Debug.Log($"ÉäÏß»÷ÖĞ{hittedObj.name}");
+        Debug.Log($"å°„çº¿å‡»ä¸­{hittedObj.name}");
         return hittedObj;
     }
 
-    public void ShowHint(bool isOnSphere, bool isVisible, int faceIndex, int xIndex, int zIndex, int yIndex)
+    public void UpdateAllHintMesh(string rootName, bool isVisible)
     {
-        if (marchingCube == null)
+        GameObject hintRoot = GameObject.Find(rootName);
+
+        if (hintRoot == null)
         {
-            Debug.LogWarning("ÇëÏÈ³õÊ¼»¯");
             return;
         }
-        marchingCube.marchingCubeDatas[faceIndex].objPointArray[xIndex, zIndex, yIndex].isActive = true;
-        marchingCube.UpdateModules(marchingCube.marchingCubeData);
+
+        MeshRenderer[] meshRenderers = hintRoot.GetComponentsInChildren<MeshRenderer>(true);
+
+        if (meshRenderers.Length == 0)
+        {
+            return;
+        }
+
+        foreach (MeshRenderer renderer in meshRenderers)
+        {
+            renderer.enabled = isVisible;
+        }
     }
 
+    public void UpdateHintMesh(GameObject hintObj, bool isVisible)
+    {
+        //è·å–hintobjçš„meshrendererï¼Œè®¾ç½®ä¸ºisvisible
+        if (hintObj != null)
+        {
+            MeshRenderer meshRenderer = hintObj.GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+            {
+                meshRenderer.enabled = isVisible;
+            }
+            else
+            {
+                Debug.LogWarning($"å¯¹è±¡ {hintObj.name} ä¸Šæ²¡æœ‰MeshRendererç»„ä»¶");
+            }
+        }
+    }
 
+    public void CreateModule(MarchingCube marchingCube, GameObject hitObj)
+    {
+        marchingCube.marchingCubeDatas[0].objPointArray[1, 1, 0].isActive = true;
+        marchingCube.UpdateModules(marchingCube.marchingCubeDatas[0]);
+    }
     #endregion
 }
