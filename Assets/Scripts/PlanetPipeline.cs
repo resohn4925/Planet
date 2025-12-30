@@ -1,11 +1,7 @@
 using System.Collections.Generic;
 using Enum;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Utility;
-using static Unity.VisualScripting.Metadata;
-using static UnityEditor.Searcher.SearcherWindow.Alignment;
-using static UnityEngine.Rendering.DebugUI.Table;
 
 namespace Planet
 {
@@ -486,11 +482,31 @@ namespace Planet
                 }
             }
         }
+
+        public void ModifyHintModule(MarchingCube.MarchingCubeData marchingCubeData)
+        {
+
+        }
         #endregion
 
         public void ShowDebug()
         {
             meshGenerator.ShowDebug();
+
+            //设置hintobj的坐标变换
+            List<Vector3> modifyPointPos = new();
+            modifyPointPos.Add(new Vector3(0, 0, 0));
+            modifyPointPos.Add(new Vector3(0, 0, 1));
+            modifyPointPos.Add(new Vector3(1, 0, 1));
+            modifyPointPos.Add(new Vector3(1, 0, 0));
+
+            //激活并且更新hintobj
+            marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
+            marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
+
+            //生成坐标变换后的hintobj
+
+            //modifyMesh3D.GenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
         }
 
         public void ShowGeometry()

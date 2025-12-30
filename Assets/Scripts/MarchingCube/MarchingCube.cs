@@ -1,46 +1,44 @@
 using Enum;
-using QFramework;
 using System.Collections.Generic;
-using TowerStacker;
-using Unity.Burst.Intrinsics;
 using UnityEditor;
 using UnityEngine;
-using static MarchingCube.MarchingCubeData;
 
 public class MarchingCube : MonoBehaviour
 {
-    private List<GameObject> modulePrefabsBasic;
-
-    public GameObject moduleCollection;
-
-    public string modulePath = "Assets/Resources/Prefabs/Modules_Building_Yoka";
+    public float spacing = 5f;
+    public int rows = 10;
+    public int columns = 10;
+    public int layers = 3;
+    public bool showModifyPoint;
+    public bool isShowGeo;//显示几何调试信息
 
     public GameObject slopePrefab;
-
     public GameObject cliffPrefab;
 
     private List<GameObject> slopeInstances;
-
     private List<GameObject> cliffInstances;
 
     public ModuleCalculate m = new();
 
-    public float spacing = 5f;
+    [Header("基础模块数据")]
+    public string modulePath = "Assets/Resources/Prefabs/Modules_Building_Yoka";
+    private List<GameObject> modulePrefabsBasic;
+    [HideInInspector] public List<GameObject> moduleInstances;
+    public GameObject moduleCollection;
 
-    public int rows = 10;
-
-    public int columns = 10;
-
-    public int layers = 3;
-
-    public bool showModifyPoint;
+    [Header("hint数据")]
+    public GameObject hintPrefab;
+    [HideInInspector] public List<GameObject> hintInstances;
+    public GameObject hintModuleCollection;
 
     [Header("地形数据")]
     public TerrainDataSO terrainDataSO;
 
     private List<Vector3> targetMeshData;
 
-    public bool isShowGeo;//显示几何调试信息
+    public List<MarchingCubeData> marchingCubeDatas;
+
+    public MarchingCubeData marchingCubeData;
 
     [System.Serializable]
     public enum EditMode
@@ -49,17 +47,6 @@ public class MarchingCube : MonoBehaviour
         Slope,
         Cliff
     }
-
-    public List<MarchingCubeData> marchingCubeDatas;
-
-    public MarchingCubeData marchingCubeData;
-
-    public List<GameObject> moduleInstances;
-
-    public ObjPointData[,,] objPointArray;
-
-    public ModulePointData[,,] modulePointArray;
-
     public void InitAllMarchingCubeDatas(int faceNum)
     {
         Clear();
@@ -94,6 +81,7 @@ public class MarchingCube : MonoBehaviour
             //    UpdateAllObj(EditMode.Slope);
             //}
         }
+
         else
         {
             for (int i = 0; i < marchingCubeDatas.Count; i++)
@@ -123,6 +111,8 @@ public class MarchingCube : MonoBehaviour
     }
 #endif
 
+
+
     public void InitModule()
     {
         if (moduleInstances == null)
@@ -133,6 +123,12 @@ public class MarchingCube : MonoBehaviour
         if (slopeInstances == null)
         {
             slopeInstances = new List<GameObject>();
+        }
+
+        //初始化hint
+        if (hintInstances == null)
+        {
+            hintInstances = new List<GameObject>();
         }
     }
 
@@ -249,7 +245,7 @@ public class MarchingCube : MonoBehaviour
     }
     #endregion
 
-    #region 地形模块生成与销毁
+    #region 基础obj生成与销毁
     public void UpdateModules(MarchingCubeData marchingCubeData)
     {
         marchingCubeData.CalculateModuleName();
@@ -380,6 +376,75 @@ public class MarchingCube : MonoBehaviour
                     marchingCubeData.faceModuleInstances.Clear();
                 }
             }
+        }
+    }
+    #endregion
+
+    #region Hint模块生成与销毁
+    public void UpdateHint(MarchingCubeData marchingCubeData)
+    {
+        //生成hintmodule,hintmodule是一个完整的obj，实例化hintprefab并存储在已声明的hintInstances中
+        ClearFaceHintInstances(marchingCubeData);
+        if (hintPrefab == null)
+        {
+            Debug.LogWarning("hintPrefab未赋值，无法生成提示物体");
+            return;
+        }
+        foreach (var hintPoint in marchingCubeData.hintObjPointDatas)
+        {
+            if (hintPoint.isActive)
+            {
+                CreateHintInstance(marchingCubeData, hintPoint);
+            }
+        }
+    }
+
+    public void ClearFaceHintInstances(MarchingCubeData marchingCubeData)
+    {
+        if (marchingCubeData.faceHintInstances == null) return;
+
+        // 销毁实例并从全局列表中移除
+        foreach (var hint in marchingCubeData.faceHintInstances)
+        {
+            if (hint != null)
+            {
+                DestroyImmediate(hint);
+                hintInstances.Remove(hint);
+            }
+        }
+        marchingCubeData.faceHintInstances.Clear();
+    }
+
+    private void CreateHintInstance(MarchingCubeData marchingCubeData, MarchingCubeData.ObjPointData hintPoint)
+    {
+        // 实例化hint预制体
+        GameObject hintInstance = Instantiate(hintPrefab, hintModuleCollection.transform);
+
+        hintInstance.transform.position = hintPoint.pos;
+
+        hintInstance.name = $"Hint_{marchingCubeData.cubeFace}_{hintPoint.xIndex}_{hintPoint.zIndex}_{hintPoint.yIndex}";
+
+        marchingCubeData.faceHintInstances.Add(hintInstance);
+        hintInstances.Add(hintInstance);
+    }
+
+    public void ClearAllHintInstances()
+    {
+        if (hintInstances == null) return;
+
+        foreach (var hint in hintInstances)
+        {
+            if (hint != null)
+            {
+                DestroyImmediate(hint);
+            }
+        }
+        hintInstances.Clear();
+
+        if (marchingCubeDatas == null) return;
+        foreach (var data in marchingCubeDatas)
+        {
+            data.faceHintInstances?.Clear();
         }
     }
     #endregion
@@ -625,18 +690,17 @@ public class MarchingCube : MonoBehaviour
         public float sphereRadius;
         public float moduleHeight;
 
-
-            
-        //Model
+        //基础obj相关
         public ObjPointData[,,] objPointArray;
-
         public List<ObjPointData> objPointDatas = new List<ObjPointData>();
-
         public List<ModulePointData> modulePointDatas = new List<ModulePointData>();
-
         public List<ModifyPointData> modifyPointDatas = new List<ModifyPointData>();
-
         public List<GameObject> faceModuleInstances = new List<GameObject>();
+
+        //hintobj相关
+        public ObjPointData[,,] hintObjPointArray;
+        public List<ObjPointData> hintObjPointDatas = new List<ObjPointData>();
+        public List<GameObject> faceHintInstances = new List<GameObject>();
 
         public MarchingCubeData(int rows, int columns, int layers, float spacing)
         {
@@ -647,6 +711,7 @@ public class MarchingCube : MonoBehaviour
 
             SetObjPointData();
             SetModulePointData();
+            SetHintObjPointData();
         }
 
         public class ObjPointData
@@ -695,15 +760,7 @@ public class MarchingCube : MonoBehaviour
                         objPointData.pos = p;
                         objPointData.isSlope = false;
                         objPointData.slopeRotation = 0f;
-
-                        if (i == 0 || i == extendedRows - 1 || j == 0 || j == extendedColumns - 1)
-                        {
-                            objPointData.isActive = false;
-                        }
-                        else
-                        {
-                            objPointData.isActive = false;
-                        }
+                        objPointData.isActive = false;
 
                         objPointArray[i, j, k] = objPointData;
                         objPointDatas.Add(objPointData);
@@ -763,6 +820,40 @@ public class MarchingCube : MonoBehaviour
         public void SetModifyPointData(List<ModifyPointData> datas)
         {
             modifyPointDatas = new List<ModifyPointData>(datas);
+        }
+
+        public void SetHintObjPointData()
+        {
+            int extendedRows = rows + 2;
+            int extendedColumns = columns + 2;
+
+            hintObjPointArray = new ObjPointData[extendedRows, extendedColumns, layers];
+            hintObjPointDatas.Clear();
+
+            for (int i = 0; i < extendedRows; i++)
+            {
+                for (int j = 0; j < extendedColumns; j++)
+                {
+                    for (int k = 0; k < layers; k++)
+                    {
+                        ObjPointData objPointData = new ObjPointData();
+
+                        objPointData.xIndex = i;
+                        objPointData.zIndex = j;
+                        objPointData.yIndex = k;
+
+                        Vector3 p = new Vector3();
+                        p.x = (i - 0.5f) * spacing;
+                        p.z = (j - 0.5f) * spacing;
+                        p.y = k * spacing + 1f / 2 * spacing;
+                        objPointData.pos = p;
+                        objPointData.isActive = false;  // 默认不激活
+
+                        hintObjPointArray[i, j, k] = objPointData;
+                        hintObjPointDatas.Add(objPointData);
+                    }
+                }
+            }
         }
 
         public void CalculateModuleName()
