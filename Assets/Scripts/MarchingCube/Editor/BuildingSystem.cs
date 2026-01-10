@@ -111,6 +111,7 @@ public class BuildingSystem : EditorWindow
         {
             marchingCube.Clear();
             marchingCube.LoadTerrainData();
+            marchingCube.UpdateModules(marchingCube.marchingCubeDatas[0]);
         }
 
         if (GUILayout.Button("保存地形", GUILayout.Height(30)))
@@ -219,7 +220,7 @@ public class BuildingSystem : EditorWindow
             if (e.type == EventType.MouseDown && e.button == 0)
             {
                 //获取currentHitObj的索引，根据索引激活基础obj
-
+                buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
 
                 CreateModule();
                 e.Use();
@@ -388,7 +389,7 @@ public class BuildingSystem : EditorWindow
 
     private void CreateModule()
     {
-        buildingSystemBase.CreateModule(marchingCube);
+        buildingSystemBase.UpdateModule(marchingCube);
         UpdateHint();
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
     }

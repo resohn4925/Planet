@@ -494,15 +494,15 @@ namespace Planet
             meshGenerator.ShowDebug();
 
             //设置hintobj的坐标变换
-            List<Vector3> modifyPointPos = new();
-            modifyPointPos.Add(new Vector3(0, 0, 0));
-            modifyPointPos.Add(new Vector3(0, 0, 1));
-            modifyPointPos.Add(new Vector3(1, 0, 1));
-            modifyPointPos.Add(new Vector3(1, 0, 0));
+            //List<Vector3> modifyPointPos = new();
+            //modifyPointPos.Add(new Vector3(0, 0, 0));
+            //modifyPointPos.Add(new Vector3(0, 0, 1));
+            //modifyPointPos.Add(new Vector3(1, 0, 1));
+            //modifyPointPos.Add(new Vector3(1, 0, 0));
 
             //激活并且更新hintobj
-            marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
-            marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
+            //marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
+            //marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
 
             //生成坐标变换后的hintobj
 
