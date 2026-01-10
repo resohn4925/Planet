@@ -11,6 +11,7 @@ namespace Planet
         public MeshGenerator meshGenerator;
         public MarchingCube marchingCube;
         public ModifyMesh3d modifyMesh3D;
+        public BuildingSystemOnSphere buildingSystemOnSphere;
 
         [Header("网格生成参数")]
         public int columnsPerFace;//每面行数
@@ -51,6 +52,11 @@ namespace Planet
             marchingCube.layers = layers;
             marchingCube.columns = columnsPerFace;
             marchingCube.rows = columnsPerFace;
+
+            //建造系统初始化
+            buildingSystemOnSphere.Init(marchingCube);
+            //如果还在编辑模式，先退出
+            buildingSystemOnSphere.SwitchEditMode(false);
 
             GenerateMesh();
             InitMarchingData();
@@ -300,6 +306,9 @@ namespace Planet
 
         public void Load()
         {
+            //如果还在建造模式，先退出
+            buildingSystemOnSphere.SwitchEditMode(false);
+
             marchingCube.LoadTerrainData();
             GenerateObj();
         }
@@ -315,6 +324,8 @@ namespace Planet
         /// </summary>
         public void GenerateObj()
         {
+            CreateRoot();
+            CreateModifiedRoot();
             ClearAllModules();
             ModifyAllModules();
         }
@@ -322,6 +333,11 @@ namespace Planet
         public void ActivateObj()
         {
             SetOverlapPoint();
+        }
+
+        public void SwitchEditMode(bool isEditing)
+        {
+            buildingSystemOnSphere.SwitchEditMode(isEditing);
         }
 
         //需要约定faceIndex=几
@@ -485,7 +501,7 @@ namespace Planet
 
         public void ModifyHintModule(MarchingCube.MarchingCubeData marchingCubeData)
         {
-
+            
         }
         #endregion
 
@@ -494,24 +510,24 @@ namespace Planet
             meshGenerator.ShowDebug();
 
             //设置hintobj的坐标变换
-            List<Vector3> modifyPointPos = new();
-            modifyPointPos.Add(new Vector3(0, 0, 0));
-            modifyPointPos.Add(new Vector3(0, 0, 1));
-            modifyPointPos.Add(new Vector3(1, 0, 1));
-            modifyPointPos.Add(new Vector3(1, 0, 0));
+            //List<Vector3> modifyPointPos = new();
+            //modifyPointPos.Add(new Vector3(0, 0, 0));
+            //modifyPointPos.Add(new Vector3(0, 0, 1));
+            //modifyPointPos.Add(new Vector3(1, 0, 1));
+            //modifyPointPos.Add(new Vector3(1, 0, 0));
 
             //激活并且更新hintobj
-            marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
-            marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
+            //marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
+            //marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
 
             //生成坐标变换后的hintobj
 
             //modifyMesh3D.GenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
         }
 
-        public void ShowGeometry()
+        public void SwitchGeometry()
         {
-            marchingCube.isShowGeo = true;
+            marchingCube.isShowGeo = !marchingCube.isShowGeo;
         }
     }
 }
