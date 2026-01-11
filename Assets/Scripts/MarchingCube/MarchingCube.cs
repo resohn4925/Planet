@@ -93,7 +93,7 @@ public class MarchingCube : MonoBehaviour
 
     public void LoadPrefab()
     {
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
         modulePrefabsBasic = new List<GameObject>();
 
         string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { modulePath });
@@ -108,7 +108,7 @@ public class MarchingCube : MonoBehaviour
             }
         }
         Debug.Log($"总共加载了 {modulePrefabsBasic.Count} 个预制体");
-#endif
+//#endif
     }
 
     public void InitModule()

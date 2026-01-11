@@ -6,11 +6,7 @@ public class BuildingSystemBase : MonoBehaviour
 {
     private float moduleHeight = 0f;
 
-    public string modulePath;
-
-    public GameObject root;
-
-    public List<GameObject> moduleList;
+    [HideInInspector]public List<GameObject> moduleList;
 
     //临时变量，记录所有可放置点的索引和激活状态
     private MarchingCube.MarchingCubeData.ObjPointData[,,] objPointArrayCurrent;

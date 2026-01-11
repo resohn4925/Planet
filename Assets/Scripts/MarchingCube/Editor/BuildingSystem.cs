@@ -427,8 +427,6 @@ public class BuildingSystem : EditorWindow
             sceneView.Repaint();
         }
 
-        //buildingSystemBase.ResetHint(marchingCube);
-        //marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
         marchingCube.ClearAllHintInstances();
     }
 }
