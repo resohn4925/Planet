@@ -58,5 +58,10 @@ public class PlanetPipelineEditor : Editor
         {
             planetPipeline.SwitchGeometry();
         }
+
+        if (GUILayout.Button("Debug"))
+        {
+            planetPipeline.ShowDebug();
+        }
     }
 }

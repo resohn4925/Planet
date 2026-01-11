@@ -310,7 +310,7 @@ public class ModifyMesh3d : MonoBehaviour
     }
 
     /// <summary>
-    /// 【推荐】输入原始网格顶点 + 原始Transform + 底部控制点 + 高度，返回变形后位置
+    /// 输入原始网格顶点 + 原始Transform + 底部控制点 + 高度，返回变形后位置
     /// </summary>
     public Vector3 GetDeformedPointWithTransform(Vector3 rawMeshVertex, Transform sourceTransform, List<Vector3> modifyPointPos, float height)
     {

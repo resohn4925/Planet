@@ -153,7 +153,6 @@ public class BuildingSystemBase : MonoBehaviour
                 data.isActive = false;
             }
         }
-        marchingCube.marchingCubeDatas[0].hintObjPointArray[0, 0, 0].isActive = true;
     }
 
     /// <summary>
