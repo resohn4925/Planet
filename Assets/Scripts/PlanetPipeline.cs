@@ -1,7 +1,8 @@
-using System.Collections.Generic;
 using Enum;
+using System.Collections.Generic;
 using UnityEngine;
 using Utility;
+using static UnityEngine.Mesh;
 
 namespace Planet
 {
@@ -36,6 +37,8 @@ namespace Planet
 
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
+        private List<Vector3> modifyModulePos = new();
+        private List<MarchingCube.MarchingCubeData.ModifyModuleData> modifyModuleDatas = new();
         private GameObject modifiedRoot;
         private GameObject root;
 
@@ -109,19 +112,20 @@ namespace Planet
         {
             foreach(var meshData in meshGenerator.meshDataList)
             {
+                SetAllModifyModuleDatas(meshData);
                 SetAllModifyPointDatas(meshData);
             }
         }
 
         /// <summary>
-        /// meshdata数据计算modifypoint,赋值给marchingcubedata
+        /// meshdata数据计算modifymodule,赋值给marchingcubedata
         /// </summary>
         /// <param name="meshData"></param>
-        public void SetAllModifyPointDatas(MeshData meshData)
+        public void SetAllModifyModuleDatas(MeshData meshData)
         {
             if (columnsPerFace == -2) return;
             else
-            height = 40f / (columnsPerFace + 2);
+                height = 40f / (columnsPerFace + 2);
             int verNum = meshGenerator.meshNum + 1;
 
             modifyPointPos.Clear();
@@ -130,11 +134,13 @@ namespace Planet
             List<int> uniqueXIndices = new List<int>();
             List<int> uniqueYIndices = new List<int>();
 
-            // 收集所有唯一索引
             foreach (Vector3 indexVec in meshData.modifyVertices)
             {
                 int originalX = (int)indexVec.x;
                 int originalY = (int)indexVec.y;
+
+                if (!(originalX % 2 == 0 && originalY % 2 == 0))
+                    continue;
 
                 if (!uniqueXIndices.Contains(originalX))
                     uniqueXIndices.Add(originalX);
@@ -161,13 +167,15 @@ namespace Planet
             {
                 int originalX = (int)indexVec.x;
                 int originalY = (int)indexVec.y;
+
+                if (!(originalX % 2 == 0 && originalY % 2 == 0))
+                    continue;
+
                 int vertexIndex = originalY * verNum + originalX;
 
                 if (vertexIndex >= 0 && vertexIndex < meshData.vertices.Count)
                 {
                     Vector3 actualPos = meshData.vertices[vertexIndex];
-
-                    // 第一层向内收缩,距离为height/2+地表偏移
                     Vector3 contractedPos = ExpandPosition(actualPos, -height / 2f - heightOffSet);
                     modifyPointPos.Add(contractedPos);
 
@@ -188,15 +196,121 @@ namespace Planet
                 }
             }
 
-            // 其他层数据
             int totalLayers = layers + 1;
             GenerateMultiLayerData(layer0Data, totalLayers);
 
-            foreach(var marchingCubeData in marchingCube.marchingCubeDatas)
+            foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
             {
-                if(marchingCubeData.cubeFace == meshData.faceType)
+                if (marchingCubeData.cubeFace == meshData.faceType)
                 {
                     marchingCubeData.SetModifyPointData(modifyPointDatas);
+                }
+            }
+        }
+
+        /// <summary>
+        /// meshdata数据计算modifypoint,赋值给marchingcubedata
+        /// </summary>
+        /// <param name="meshData"></param>
+        public void SetAllModifyPointDatas(MeshData meshData)
+        {
+            if (columnsPerFace == -2) return;
+            height = 40f / (columnsPerFace + 2);
+            int verNum = meshGenerator.meshNum + 1;
+            int maxIndex = verNum - 1;
+
+            modifyModulePos.Clear();
+            modifyModuleDatas.Clear();
+
+            List<Vector3> filteredModifyVertices = new List<Vector3>();
+            foreach (Vector3 indexVec in meshData.modifyVertices)
+            {
+                int originalX = (int)indexVec.x;
+                int originalY = (int)indexVec.y;
+
+                bool isXValid = (originalX == 0 || originalX == 1)
+                             || (originalX >= 3 && originalX % 2 == 1)
+                             || originalX == maxIndex;
+                bool isYValid = (originalY == 0 || originalY == 1)
+                             || (originalY >= 3 && originalY % 2 == 1)
+                             || originalY == maxIndex;
+
+                if (isXValid && isYValid)
+                {
+                    filteredModifyVertices.Add(indexVec);
+                }
+            }
+
+            List<int> uniqueXIndices = new List<int>();
+            List<int> uniqueYIndices = new List<int>();
+
+            foreach (Vector3 indexVec in filteredModifyVertices)
+            {
+                int originalX = (int)indexVec.x;
+                int originalY = (int)indexVec.y;
+
+                if (!uniqueXIndices.Contains(originalX))
+                    uniqueXIndices.Add(originalX);
+
+                if (!uniqueYIndices.Contains(originalY))
+                    uniqueYIndices.Add(originalY);
+            }
+
+            uniqueXIndices.Sort();
+            uniqueYIndices.Sort();
+
+            Dictionary<int, int> xIndexMap = new Dictionary<int, int>();
+            Dictionary<int, int> yIndexMap = new Dictionary<int, int>();
+
+            for (int i = 0; i < uniqueXIndices.Count; i++)
+                xIndexMap[uniqueXIndices[i]] = i;
+
+            for (int i = 0; i < uniqueYIndices.Count; i++)
+                yIndexMap[uniqueYIndices[i]] = i;
+
+            List<MarchingCube.MarchingCubeData.ModifyModuleData> layer0Data = new List<MarchingCube.MarchingCubeData.ModifyModuleData>();
+
+            foreach (Vector3 indexVec in filteredModifyVertices)
+            {
+                int originalX = (int)indexVec.x;
+                int originalY = (int)indexVec.y;
+                int vertexIndex = originalY * verNum + originalX;
+
+                if (vertexIndex >= 0 && vertexIndex < meshData.vertices.Count)
+                {
+                    Vector3 actualPos = meshData.vertices[vertexIndex];
+
+                    // 第一层向内收缩,距离为地表偏移
+                    Vector3 contractedPos = ExpandPosition(actualPos, -heightOffSet);
+                    modifyModulePos.Add(contractedPos);
+
+                    int mappedX = xIndexMap[originalX];
+                    int mappedY = yIndexMap[originalY];
+
+                    MarchingCube.MarchingCubeData.ModifyModuleData data = new MarchingCube.MarchingCubeData.ModifyModuleData
+                    {
+                        xIndex = mappedX,
+                        yIndex = 0,
+                        zIndex = mappedY,
+                        pos = contractedPos,
+                        normal = actualPos.normalized
+                    };
+
+                    layer0Data.Add(data);
+                    modifyModuleDatas.Add(data);
+                }
+            }
+
+            // 其他层数据
+            //int totalLayers = layers + 1;
+            //GenerateMultiLayerData(layer0Data, totalLayers);
+
+            // 赋值给marchingCubeData
+            foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
+            {
+                if (marchingCubeData.cubeFace == meshData.faceType)
+                {
+                    marchingCubeData.SetModifyModuleData(modifyModuleDatas);
                 }
             }
         }
@@ -519,6 +633,16 @@ namespace Planet
         public void SwitchGeometry()
         {
             marchingCube.isShowGeo = !marchingCube.isShowGeo;
+        }
+
+        private void OnDrawGizmos()
+        {
+            //Gizmos.color = Color.white;
+            //foreach (Vector3 indexVec in meshGenerator.meshDataList[0].vertices)
+            //{
+
+            //    Gizmos.DrawSphere(indexVec, 0.25f);
+            //}
         }
     }
 }

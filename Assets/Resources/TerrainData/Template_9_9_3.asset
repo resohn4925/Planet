@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ac1c71ee71330d94e9a165d1b3f2e9c9, type: 3}
-  m_Name: Template
+  m_Name: Template_9_9_3
   m_EditorClassIdentifier: 
   rows: 9
   columns: 9

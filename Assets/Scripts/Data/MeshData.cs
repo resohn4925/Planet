@@ -64,7 +64,7 @@ public class MeshData
                 //    modifyVertices.Add(new Vector3(x, y, 0));
                 //}
 
-                if ((x % 2 == 0) && (y % 2 == 0))
+                //if ((x % 2 == 0) && (y % 2 == 0))
                 {
                     modifyVertices.Add(new Vector3(x, y, 0));
                 }

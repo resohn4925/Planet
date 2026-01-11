@@ -627,35 +627,40 @@ public class MarchingCube : MonoBehaviour
             return;
         }
 
-        //foreach (MarchingCubeData.ObjPointData pointData in marchingCubeData.objPointDatas)
-        //{
-        //    Vector3 worldPos = pointData.pos;
-        //    Gizmos.color = pointData.isActive ? Color.red : Color.yellow;
-        //    Gizmos.DrawSphere(worldPos, 0.5f);
-        //}
-
         if (marchingCubeDatas == null || !isShowGeo) return;
 
-        foreach (var data in marchingCubeDatas)
-        {
-            foreach (MarchingCubeData.ObjPointData pointData in data.objPointDatas)
-            {
-                Vector3 worldPos = pointData.pos;
-                if (data.cubeFace == CubeFace.Back && pointData.xIndex == 0 && pointData.zIndex == 1)
-                {
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawSphere(worldPos, 0.5f);
-                }
+        //绘制objpoint
+        //foreach (var data in marchingCubeDatas)
+        //{
+        //    foreach (MarchingCubeData.ObjPointData pointData in data.objPointDatas)
+        //    {
+        //        Vector3 worldPos = pointData.pos;
+        //        if (data.cubeFace == CubeFace.Back && pointData.xIndex == 0 && pointData.zIndex == 1)
+        //        {
+        //            Gizmos.color = Color.red;
+        //            Gizmos.DrawSphere(worldPos, 0.5f);
+        //        }
 
-                else
-                {
-                    Gizmos.color = Color.yellow;
-                    Gizmos.DrawSphere(worldPos, 0.25f);
-                }
+        //        else
+        //        {
+        //            Gizmos.color = Color.yellow;
+        //            Gizmos.DrawSphere(worldPos, 0.25f);
+        //        }
+        //    }
+        //}
+
+        //绘制objpoint(变形后)
+        Gizmos.color = Color.yellow;
+        foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
+        {
+            foreach (MarchingCubeData.ModifyModuleData modifyModuleData in marchingCubeData.modifyModuleDatas)
+            {
+                Vector3 worldPos = modifyModuleData.pos;
+                Gizmos.DrawSphere(worldPos, 0.5f);
             }
         }
 
-        //draw module point
+        //绘制modulepoint
         //Gizmos.color = Color.grey;
         //foreach (MarchingCubeData.ModulePointData modulePointData in marchingCubeData.modulePointDatas)
         //{
@@ -663,17 +668,17 @@ public class MarchingCube : MonoBehaviour
         //    Gizmos.DrawSphere(worldPos, 0.5f);
         //}
 
-        //if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
-        //Gizmos.color = Color.green;
+        if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
 
-        //foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
-        //{
-        //    foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
-        //    {
-        //        Vector3 worldPos = modifyPointData.pos;
-        //        Gizmos.DrawSphere(worldPos, 0.25f);
-        //    }
-        //}
+        Gizmos.color = Color.green;
+        foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
+        {
+            foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
+            {
+                Vector3 worldPos = modifyPointData.pos;
+                Gizmos.DrawSphere(worldPos, 0.5f);
+            }
+        }
     }
 
     public class MarchingCubeData
@@ -692,7 +697,8 @@ public class MarchingCube : MonoBehaviour
         public ObjPointData[,,] objPointArray;
         public List<ObjPointData> objPointDatas = new List<ObjPointData>();
         public List<ModulePointData> modulePointDatas = new List<ModulePointData>();
-        public List<ModifyPointData> modifyPointDatas = new List<ModifyPointData>();
+        public List<ModifyPointData> modifyPointDatas = new List<ModifyPointData>();//module的边界点
+        public List<ModifyModuleData> modifyModuleDatas = new List<ModifyModuleData>();//obj的边界点
         public List<GameObject> faceModuleInstances = new List<GameObject>();
 
         //hintobj相关
@@ -815,9 +821,23 @@ public class MarchingCube : MonoBehaviour
             public Vector3 normal;
         }
 
+        public class ModifyModuleData
+        {
+            public int xIndex;
+            public int yIndex;
+            public int zIndex;
+            public Vector3 pos;
+            public Vector3 normal;
+        }
+
         public void SetModifyPointData(List<ModifyPointData> datas)
         {
             modifyPointDatas = new List<ModifyPointData>(datas);
+        }
+
+        public void SetModifyModuleData(List<ModifyModuleData> datas)
+        {
+            modifyModuleDatas = new List<ModifyModuleData>(datas);
         }
 
         public void SetHintObjPointData()
