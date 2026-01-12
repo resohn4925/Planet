@@ -220,14 +220,31 @@ public class BuildingSystemOnSphere : MonoBehaviour
             return;
         }
 
-        float height = 3.6f;
+        float height = 3.636364f;
         List<Vector3> modifyPointPos = new();
-        modifyPointPos.Add(new Vector3(28.76f, -4.36f, 0));
-        modifyPointPos.Add(new Vector3(29.09f, 0, 0));
-        modifyPointPos.Add(new Vector3(28.76f, 0, 4.36f));
-        modifyPointPos.Add(new Vector3(28.44f, -4.32f, 4.32f));
+        modifyPointPos = marchingCube.marchingCubeDatas[1].GetModifyModulePointsAroundModule(0, 0, 1);
+
 
         Matrix4x4 worldMatrix = testHintObj.transform.localToWorldMatrix;
         modifyMesh3D.GenerateModule(modifyPointPos, testHintObj, newParentObj, height, worldMatrix);
+    }
+
+    /// <summary>
+    /// 设置所有重合点的信息
+    /// </summary>
+    public void SetOverlapPoint(int faceIndex, int xIndex, int yIndex)
+    {
+        Vector3 pos = marchingCube.marchingCubeDatas[faceIndex].objPointArray[xIndex, yIndex, 0].pos;
+        foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
+        {
+            foreach (var objPointData in marchingCubeData.objPointDatas)
+            {
+                if (objPointData.pos == pos)
+                {
+                    //marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, activeObjZIndex].isActive = isActivate;
+                    //modifyPointPos = marchingCube.marchingCubeDatas[1].GetModifyModulePointsAroundModule(0, 0, 1);
+                }
+            }
+        }
     }
 }

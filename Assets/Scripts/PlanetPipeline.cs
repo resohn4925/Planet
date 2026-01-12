@@ -302,8 +302,8 @@ namespace Planet
             }
 
             // 其他层数据
-            //int totalLayers = layers + 1;
-            //GenerateMultiLayerData(layer0Data, totalLayers);
+            int totalLayers = layers;
+            GenerateMultiLayerModuleData(layer0Data, totalLayers);
 
             // 赋值给marchingCubeData
             foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
@@ -312,6 +312,42 @@ namespace Planet
                 {
                     marchingCubeData.SetModifyModuleData(modifyModuleDatas);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 生成Module点的多层数据
+        /// </summary>
+        /// <param name="baseLayerData">基础层数据（layer0）</param>
+        /// <param name="totalLayers">总层数</param>
+        private void GenerateMultiLayerModuleData(List<MarchingCube.MarchingCubeData.ModifyModuleData> baseLayerData, int totalLayers)
+        {
+            if (baseLayerData == null || baseLayerData.Count == 0)
+                return;
+
+            // 从第二层开始生成
+            for (int layerIndex = 1; layerIndex < totalLayers; layerIndex++)
+            {
+                float currentLayerHeight = layerIndex * height;
+
+                foreach (var basePoint in baseLayerData)
+                {
+                    // 计算当前层的位置
+                    Vector3 layerPos = ExpandPosition(basePoint.pos, currentLayerHeight);
+
+                    MarchingCube.MarchingCubeData.ModifyModuleData layerData = new MarchingCube.MarchingCubeData.ModifyModuleData
+                    {
+                        xIndex = basePoint.xIndex,
+                        yIndex = layerIndex, // 层索引递增
+                        zIndex = basePoint.zIndex,
+                        pos = layerPos,
+                        normal = basePoint.normal
+                    };
+
+                    modifyModuleDatas.Add(layerData);
+                }
+
+                Debug.Log($"Module点生成了第{layerIndex}层的{baseLayerData.Count}个点");
             }
         }
 
@@ -341,6 +377,8 @@ namespace Planet
                 }
             }
         }
+
+
 
         /// <summary>
         /// 辅助函数：根据面类型获取旋转四元数
@@ -398,7 +436,7 @@ namespace Planet
                     modifyPointDatas.Add(layerData);
                 }
 
-                //Debug.Log($"生成了第{layerIndex}层的{baseLayerData.Count}个点");
+                Debug.Log($"生成了第{layerIndex}层的{baseLayerData.Count}个点");
             }
         }
 

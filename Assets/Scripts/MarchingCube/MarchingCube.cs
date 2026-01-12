@@ -656,7 +656,7 @@ public class MarchingCube : MonoBehaviour
             foreach (MarchingCubeData.ModifyModuleData modifyModuleData in marchingCubeData.modifyModuleDatas)
             {
                 Vector3 worldPos = modifyModuleData.pos;
-                Gizmos.DrawSphere(worldPos, 0.5f);
+                Gizmos.DrawSphere(worldPos, 0.3f);
             }
         }
 
@@ -668,7 +668,7 @@ public class MarchingCube : MonoBehaviour
         //    Gizmos.DrawSphere(worldPos, 0.5f);
         //}
 
-        if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
+        //if (marchingCubeData.modifyPointDatas == null || !showModifyPoint) return;
 
         Gizmos.color = Color.green;
         foreach (MarchingCubeData marchingCubeData in marchingCubeDatas)
@@ -676,7 +676,7 @@ public class MarchingCube : MonoBehaviour
             foreach (MarchingCubeData.ModifyPointData modifyPointData in marchingCubeData.modifyPointDatas)
             {
                 Vector3 worldPos = modifyPointData.pos;
-                Gizmos.DrawSphere(worldPos, 0.5f);
+                Gizmos.DrawSphere(worldPos, 0.3f);
             }
         }
     }
@@ -939,6 +939,54 @@ public class MarchingCube : MonoBehaviour
                 modifyPointPos.Add(found.pos);
             }
             return modifyPointPos;
+        }
+
+        /// <summary>
+        /// 根据module计算modifyModulePoint
+        /// </summary>
+        /// <param name="x">module的x索引</param>
+        /// <param name="y">module的y索引（层索引）</param>
+        /// <param name="z">module的z索引</param>
+        /// <returns>周围4个modifyModuleData的pos列表</returns>
+        public List<Vector3> GetModifyModulePointsAroundModule(int x, int y, int z)
+        {
+            List<Vector3> modifyModulePos = new List<Vector3>();
+
+            // 复用原有的4个周围点索引规则（和Point点逻辑一致）
+            (int, int, int)[] points =
+            {
+        (x, y, z),
+        (x, y, z + 1),
+        (x + 1, y, z + 1),
+        (x + 1, y, z)
+    };
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                var (px, py, pz) = points[i];
+                ModifyModuleData found = null;
+
+                foreach (ModifyModuleData data in modifyModuleDatas)
+                {
+                    if (data.xIndex == px && data.yIndex == py && data.zIndex == pz)
+                    {
+                        found = data;
+                        break;
+                    }
+                }
+
+                if (found == null)
+                {
+                    Debug.LogWarning($"未找到ModifyModuleData：索引({px},{py},{pz})");
+                    modifyModulePos.Add(Vector3.zero);
+                    continue;
+                }
+
+                // Debug.Log($"Module索引({px},{py},{pz}), 位置:{found.pos.ToString()}");
+                modifyModulePos.Add(found.pos);
+            }
+
+            return modifyModulePos;
         }
 
         private bool GetObjPointState(int x, int z, int y)
