@@ -260,7 +260,9 @@ public class ModifyMesh3d : MonoBehaviour
 
         deformedModules.Add(modifiedObject);
 
-        Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质");
+        MeshCollider meshCollider = modifiedObject.AddComponent<MeshCollider>();
+
+        //Debug.Log($"已创建变形模块: {modifiedObject.name}，包含{subMeshCount}个子网格和{meshRenderer.sharedMaterials.Length}个材质");
     }
 
     /// <summary>

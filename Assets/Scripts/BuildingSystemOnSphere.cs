@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Planet;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,13 +13,15 @@ public class BuildingSystemOnSphere : MonoBehaviour
     public ModifyMesh3d modifyMesh3D;
 
     public GameObject hintObj;
+    public GameObject modifiedHintRoot;
 
     private bool isEditing = false;
     private GameObject lastHitObj = null;
+    private float _hintModifyHeight = 3.636364f;
 
     //测试用变量
-    public GameObject testHintObj;
-    public GameObject newParentObj;
+    //public GameObject testHintObj;
+
 
     public void Init(MarchingCube marchingCube)
     {
@@ -62,6 +66,8 @@ public class BuildingSystemOnSphere : MonoBehaviour
         //表现层,展示所有可建造的地块
         UpdateHint();
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+        buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
+        //ModifyAllHintModules();
     }
 
     private void StopEditing()
@@ -74,12 +80,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
 
         marchingCube.ClearAllHintInstances();
+        ClearAllModifiedHints();
     }
 
     public void UpdateHint()
     {
         buildingSystemBase.CalculateHint(marchingCube);
         marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
+        ModifyAllHintModules();
     }
 
     private void OnSceneGUI(SceneView sceneView)
@@ -148,30 +156,92 @@ public class BuildingSystemOnSphere : MonoBehaviour
         buildingSystemBase.UpdateModule(marchingCube);
         UpdateHint();
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+
+        ClearAllModifiedHints();
+        ModifyAllHintModules();
+        buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
+
+        //pipeline中更新变形模块
+        var pipelines = FindObjectsOfType<PlanetPipeline>();
+        var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
+        if (targetPipeline == null)
+        {
+            Debug.LogError("找不到planetpipeline,请先创建");
+        }
+        else { targetPipeline.GenerateObj(); }
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
     {
-        Debug.Log($"鼠标移出了对象: {exitedObj.name}");
+        //Debug.Log($"鼠标移出了对象: {exitedObj.name}");
 
         buildingSystemBase.UpdateHintMesh(exitedObj, false);
     }
 
     /// <summary>
-    /// 把hintroot下的所有hintobj进行网格变形
+    /// 批量处理HintRoot下所有Hint物件的空间变换
     /// </summary>
-    private void ModifyAllHintModules()
+    public void ModifyAllHintModules()
     {
+        GameObject hintRoot = GameObject.Find("HintRoot");
+        if (hintRoot == null)
+        {
+            Debug.LogError("未找到HintRoot节点！");
+            return;
+        }
+
+        foreach (Transform childTrans in hintRoot.transform)
+        {
+            GameObject childObj = childTrans.gameObject;
+            string objName = childObj.name;
+
+            if (objName.StartsWith("Hint_"))
+            {
+                ModifyHintModule(objName, childObj);
+            }
+        }
+    }
+
+    public void ClearAllModifiedHints()
+    {
+        if (modifiedHintRoot == null)
+        {
+            Debug.LogError("未找到ModifiedHintRoot节点！");
+            return;
+        }
+
+        //销毁所有子物件
+        List<GameObject> childObjs = new List<GameObject>();
+        foreach (Transform childTrans in modifiedHintRoot.transform)
+        {
+            childObjs.Add(childTrans.gameObject);
+        }
+        int destroyedCount = 0;
+        foreach (GameObject childObj in childObjs)
+        {
+            if (childObj == null) continue;
+
+            // 编辑模式用DestroyImmediate，运行时用Destroy
+            if (Application.isEditor && !Application.isPlaying)
+            {
+                DestroyImmediate(childObj);
+            }
+            else
+            {
+                Destroy(childObj);
+            }
+            destroyedCount++;
+        }
 
     }
 
     /// <summary>
     /// 把单个hintobj进行网格变形
     /// </summary>
-    public void ModifyHintModule()
+    public void ModifyHintModule(string hintName, GameObject hintObj)
     {
         //获取hintobj索引
-        string hintName = testHintObj.name;
+        //string hintName = testHintObj.name;
         CubeFace face;
         int xIndex;int yIndex;int zIndex;
 
@@ -212,7 +282,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             face = faceTemp;
             xIndex = xIndexTemp;yIndex = yIndexTemp;zIndex = zIndexTemp;
 
-            Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
+            //Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
         }
         catch (Exception ex)
         {
@@ -222,11 +292,10 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         float height = 3.636364f;
         List<Vector3> modifyPointPos = new();
-        modifyPointPos = marchingCube.marchingCubeDatas[1].GetModifyModulePointsAroundModule(0, 0, 1);
+        modifyPointPos = marchingCube.marchingCubeDatas[0].GetModifyModulePointsAroundModule(xIndex, yIndex, zIndex);
 
-
-        Matrix4x4 worldMatrix = testHintObj.transform.localToWorldMatrix;
-        modifyMesh3D.GenerateModule(modifyPointPos, testHintObj, newParentObj, height, worldMatrix);
+        Matrix4x4 worldMatrix = hintObj.transform.localToWorldMatrix;
+        modifyMesh3D.GenerateModule(modifyPointPos, hintObj, modifiedHintRoot, height, worldMatrix);
     }
 
     /// <summary>
@@ -242,7 +311,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 if (objPointData.pos == pos)
                 {
                     //marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, activeObjZIndex].isActive = isActivate;
-                    //modifyPointPos = marchingCube.marchingCubeDatas[1].GetModifyModulePointsAroundModule(0, 0, 1);
                 }
             }
         }

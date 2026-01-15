@@ -160,7 +160,7 @@ public class BuildingSystemBase : MonoBehaviour
     /// </summary>
     public GameObject GenerateHittedObj(GameObject hittedObj)
     {
-        Debug.Log($"射线击中{hittedObj.name}");
+        //Debug.Log($"射线击中{hittedObj.name}");
         return hittedObj;
     }
 

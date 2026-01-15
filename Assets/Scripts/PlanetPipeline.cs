@@ -665,7 +665,8 @@ namespace Planet
         public void ShowDebug()
         {
             //meshGenerator.ShowDebug();
-            buildingSystemOnSphere.ModifyHintModule();
+            //buildingSystemOnSphere.ModifyHintModule();
+            buildingSystemOnSphere.ModifyAllHintModules();
         }
 
         public void SwitchGeometry()
