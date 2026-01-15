@@ -35,6 +35,8 @@ namespace Planet
         [Header("Prefab")]
         public GameObject light;
 
+        [HideInInspector]public bool isEditing;
+
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
         private List<Vector3> modifyModulePos = new();
@@ -378,8 +380,6 @@ namespace Planet
             }
         }
 
-
-
         /// <summary>
         /// 辅助函数：根据面类型获取旋转四元数
         /// </summary>
@@ -484,11 +484,12 @@ namespace Planet
 
         public void ActivateObj()
         {
-            SetOverlapPoint();
+            SetOverlapPoint(faceIndex, activeObjXIndex, activeObjYIndex, activeObjZIndex);
         }
 
         public void SwitchEditMode(bool isEditing)
         {
+            this.isEditing = isEditing;
             buildingSystemOnSphere.SwitchEditMode(isEditing);
         }
 
@@ -509,20 +510,22 @@ namespace Planet
         /// <summary>
         /// 设置所有重合点的信息
         /// </summary>
-        public void SetOverlapPoint()
+        public void SetOverlapPoint(int faceIndex, int x, int y, int z)
         {
-            Vector3 pos = marchingCube.marchingCubeDatas[faceIndex].objPointArray[activeObjXIndex, activeObjYIndex, 0].pos;
+            Vector3 pos = marchingCube.marchingCubeDatas[faceIndex].objPointArray[x, y, 0].pos;
             foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
             {
                 foreach (var objPointData in marchingCubeData.objPointDatas)
                 {
                     if (objPointData.pos == pos)
                     {
-                        marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, activeObjZIndex].isActive = isActivate;
+                        marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, z].isActive = isActivate;
                     }
                 }
             }
         }
+
+
 
         public void ClearAllModules()
         {

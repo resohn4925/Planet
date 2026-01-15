@@ -1,5 +1,6 @@
 using Enum;
 using System.Collections.Generic;
+using TowerStacker;
 using UnityEditor;
 using UnityEngine;
 
@@ -379,7 +380,7 @@ public class MarchingCube : MonoBehaviour
     #endregion
 
     #region Hint模块生成与销毁
-    public void UpdateHint(MarchingCubeData marchingCubeData)
+    public void UpdateHint(MarchingCube marchingCube)
     {
         //生成hintmodule,hintmodule是一个完整的obj，实例化hintprefab并存储在已声明的hintInstances中
         ClearFaceHintInstances(marchingCubeData);
@@ -388,11 +389,30 @@ public class MarchingCube : MonoBehaviour
             Debug.LogWarning("hintPrefab未赋值，无法生成提示物体");
             return;
         }
-        foreach (var hintPoint in marchingCubeData.hintObjPointDatas)
+
+        //foreach (var hintPoint in marchingCubeData.hintObjPointDatas)
+        //{
+        //    if (hintPoint.isActive)
+        //    {
+        //        CreateHintInstance(marchingCubeData, hintPoint);
+        //    }
+        //}
+        foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
         {
-            if (hintPoint.isActive)
+            ClearFaceHintInstances(marchingCubeData);
+
+            if (hintPrefab == null)
             {
-                CreateHintInstance(marchingCubeData, hintPoint);
+                Debug.LogWarning("hintPrefab未赋值，无法生成提示物体");
+                continue;
+            }
+
+            foreach (var hintPoint in marchingCubeData.hintObjPointDatas)
+            {
+                if (hintPoint.isActive)
+                {
+                    CreateHintInstance(marchingCubeData, hintPoint);
+                }
             }
         }
     }

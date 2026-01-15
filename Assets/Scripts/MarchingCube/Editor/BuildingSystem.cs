@@ -413,7 +413,7 @@ public class BuildingSystem : EditorWindow
     public void UpdateHint()
     {
         buildingSystemBase.CalculateHint(marchingCube);
-        marchingCube.UpdateHint(marchingCube.marchingCubeDatas[0]);
+        marchingCube.UpdateHint(marchingCube);
     }
 
     private void StopEditing()

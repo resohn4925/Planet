@@ -1,5 +1,7 @@
+using Planet;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class BuildingSystemBase : MonoBehaviour
@@ -67,7 +69,14 @@ public class BuildingSystemBase : MonoBehaviour
                 zIndex >= 0 && zIndex < targetData.objPointArray.GetLength(1) &&
                 yIndex >= 0 && yIndex < targetData.objPointArray.GetLength(2))
             {
-                targetData.objPointArray[xIndex, zIndex, yIndex].isActive = true;
+                //targetData.objPointArray[xIndex, zIndex, yIndex].isActive = true;
+                var pipelines = FindObjectsOfType<PlanetPipeline>();
+                var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
+                if (targetPipeline == null)
+                {
+                    Debug.LogError("找不到planetpipeline,请先创建");
+                }
+                else { targetPipeline.SetOverlapPoint((int)face, xIndex, zIndex, yIndex); }
                 Debug.Log($"激活{face}上的点,索引为[{xIndex}, {zIndex}, {yIndex}]");
             }
             else
@@ -94,48 +103,50 @@ public class BuildingSystemBase : MonoBehaviour
             return;
         }
 
-        var hintArray = marchingCube.marchingCubeDatas[0].hintObjPointArray;
-        var objArray = marchingCube.marchingCubeDatas[0].objPointArray;
-
-        // 校验数组是否为空
-        if (hintArray == null || objArray == null)
+        foreach (var data in marchingCube.marchingCubeDatas)
         {
-            Debug.LogError("hintObjPointArray或objPointArray为空！");
-            return;
-        }
+            var hintArray = data.hintObjPointArray;
+            var objArray = data.objPointArray;
 
-        // 获取三维数组各维度的长度
-        int xSize = hintArray.GetLength(0);
-        int zSize = hintArray.GetLength(1);
-        int ySize = hintArray.GetLength(2);
-
-        // 遍历所有x、z、y维度的点，按规则激活hint
-        // 规则:y=0时,所有hint激活
-        // 规则:y>0时，仅当y-1层对应位置的物体点激活，当前hint才激活
-        for (int x = 0; x < xSize; x++)
-        {
-            for (int z = 0; z < zSize; z++)
+            // 校验当前data的数组是否为空
+            if (hintArray == null || objArray == null)
             {
-                for (int y = 0; y < ySize; y++)
+                Debug.LogError($"CubeFace {data.cubeFace} 的hintObjPointArray或objPointArray为空！");
+                continue; // 跳过当前data
+            }
+
+            // 获取当前data三维数组的维度长度
+            int xSize = hintArray.GetLength(0);
+            int zSize = hintArray.GetLength(1);
+            int ySize = hintArray.GetLength(2);
+
+            // 遍历当前data的所有x、z、y维度的点，按规则激活hint
+            for (int x = 0; x < xSize; x++)
+            {
+                for (int z = 0; z < zSize; z++)
                 {
-                    if (y == 0)
+                    for (int y = 0; y < ySize; y++)
                     {
-                        hintArray[x, z, y].isActive = true;
-                    }
-                    else
-                    {
-                        // 防止越界
-                        if (y - 1 >= 0 &&
-                            x < objArray.GetLength(0) &&
-                            z < objArray.GetLength(1) &&
-                            y - 1 < objArray.GetLength(2))
+                        if (y == 0)
                         {
-                            hintArray[x, z, y].isActive = objArray[x, z, y - 1].isActive;
+                            // y=0时，当前data的该点激活
+                            hintArray[x, z, y].isActive = true;
                         }
                         else
                         {
-                            hintArray[x, z, y].isActive = false;
-                            Debug.LogWarning($"[{x}, {z}, {y}] 下方层索引越界，无法激活hint！");
+                            if (y - 1 >= 0 &&
+                                x < objArray.GetLength(0) &&
+                                z < objArray.GetLength(1) &&
+                                y - 1 < objArray.GetLength(2))
+                            {
+                                // y>0时，激活状态继承自当前data下y-1层的对应点
+                                hintArray[x, z, y].isActive = objArray[x, z, y - 1].isActive;
+                            }
+                            else
+                            {
+                                hintArray[x, z, y].isActive = false;
+                                Debug.LogWarning($"CubeFace {data.cubeFace} 上[{x}, {z}, {y}] 下方层索引越界，无法激活hint！");
+                            }
                         }
                     }
                 }

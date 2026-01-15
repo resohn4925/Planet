@@ -5,7 +5,6 @@ using UnityEngine;
 [CustomEditor(typeof(PlanetPipeline))]
 public class PlanetPipelineEditor : Editor
 {
-    private bool isEditing = false;
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
@@ -37,6 +36,7 @@ public class PlanetPipelineEditor : Editor
             planetPipeline.GenerateObj();
         }
 
+         bool isEditing = planetPipeline.isEditing;
         string buttonText = isEditing ? "½áÊø±à¼­" : "¿ªÊ¼±à¼­";
 
         if (GUILayout.Button(buttonText))
