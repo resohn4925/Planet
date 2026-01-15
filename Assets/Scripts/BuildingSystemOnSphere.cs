@@ -123,6 +123,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             //根据名字计算currentobj的face,x,y,z索引
             //SetOverlapPoint逻辑计算该物件的overlap物件索引
             //激活overlap物件
+            SetOverlapPoint(currentHitObj.name);
 
             if (e.type == EventType.MouseDown && e.button == 0)
             {
@@ -313,16 +314,72 @@ public class BuildingSystemOnSphere : MonoBehaviour
     /// <summary>
     /// 设置所有重合点的信息
     /// </summary>
-    public void SetOverlapPoint(int faceIndex, int xIndex, int yIndex)
+    public void SetOverlapPoint(string hintName)
     {
-        Vector3 pos = marchingCube.marchingCubeDatas[faceIndex].objPointArray[xIndex, yIndex, 0].pos;
+        CubeFace face;
+        int xIndex; int yIndex; int zIndex;
+
+        try
+        {
+            // 解析名字
+            string[] parts = hintName.Split('_');
+
+            if (parts.Length < 5)
+            {
+                Debug.LogError($"Invalid hint name format: {hintName}");
+                return;
+            }
+
+            // 解析参数
+            CubeFace faceTemp = (CubeFace)System.Enum.Parse(typeof(CubeFace), parts[1], true);
+            int xIndexTemp = int.Parse(parts[2]);
+            int zIndexTemp = int.Parse(parts[3]);
+
+            int yIndexTemp = int.Parse(parts[4]);
+
+            // 查找对应的 MarchingCubeData
+            MarchingCube.MarchingCubeData targetData = null;
+            foreach (var data in marchingCube.marchingCubeDatas)
+            {
+                if (data.cubeFace == faceTemp)
+                {
+                    targetData = data;
+                    break;
+                }
+            }
+
+            if (targetData == null)
+            {
+                Debug.LogError($"No MarchingCubeData found for face: {faceTemp}");
+                return;
+            }
+            face = faceTemp;
+            xIndex = xIndexTemp; yIndex = yIndexTemp; zIndex = zIndexTemp;
+
+            //Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
+        }
+
+        catch (Exception ex)
+        {
+            Debug.LogError($"激活{hintName}失败: {ex.Message}");
+            return;
+        }
+
+        Vector3 pos = marchingCube.marchingCubeDatas[(int)face].objPointArray[xIndex, yIndex, 0].pos;
         foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
         {
             foreach (var objPointData in marchingCubeData.objPointDatas)
             {
                 if (objPointData.pos == pos)
                 {
-                    //marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, activeObjZIndex].isActive = isActivate;
+                    string hintNameOverlap = $"Hint_{marchingCubeData.cubeFace}_{objPointData.xIndex}_{objPointData.yIndex}_{yIndex}";
+                    Debug.Log(hintNameOverlap);
+                    GameObject currentHintObj = GameObject.Find(hintNameOverlap);
+                    if(currentHintObj == null)
+                    {
+                        Debug.LogWarning("hint为空");
+                    }
+                    buildingSystemBase.UpdateHintMesh(currentHintObj, true);
                 }
             }
         }
