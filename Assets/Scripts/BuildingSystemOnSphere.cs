@@ -118,7 +118,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             currentHitObj = hit.collider.gameObject;
             buildingSystemBase.GenerateHittedObj(currentHitObj);
 
-            //激活overlap的所有obj
+            buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
             buildingSystemBase.UpdateHintMesh(currentHitObj, true);
             //根据名字计算currentobj的face,x,y,z索引
             //SetOverlapPoint逻辑计算该物件的overlap物件索引
@@ -356,7 +356,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             face = faceTemp;
             xIndex = xIndexTemp; yIndex = yIndexTemp; zIndex = zIndexTemp;
 
-            //Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
+            Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
         }
 
         catch (Exception ex)
@@ -365,23 +365,31 @@ public class BuildingSystemOnSphere : MonoBehaviour
             return;
         }
 
-        Vector3 pos = marchingCube.marchingCubeDatas[(int)face].objPointArray[xIndex, yIndex, 0].pos;
+
+        Vector3 pos = marchingCube.marchingCubeDatas[(int)face].objPointArray[xIndex, zIndex, 0].pos;
         foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
         {
             foreach (var objPointData in marchingCubeData.objPointDatas)
             {
                 if (objPointData.pos == pos)
                 {
-                    string hintNameOverlap = $"Hint_{marchingCubeData.cubeFace}_{objPointData.xIndex}_{objPointData.yIndex}_{yIndex}";
-                    Debug.Log(hintNameOverlap);
+                    string hintNameOverlap = $"Hint_{marchingCubeData.cubeFace}_{objPointData.xIndex}_{objPointData.zIndex}_{yIndex}_modified";
+                    Debug.Log($"{hintName}的重合点是{hintNameOverlap}");
                     GameObject currentHintObj = GameObject.Find(hintNameOverlap);
-                    if(currentHintObj == null)
+                    if (currentHintObj == null)
                     {
-                        Debug.LogWarning("hint为空");
+                        Debug.LogWarning($"{hintName}未找到重合点{hintNameOverlap}");
                     }
                     buildingSystemBase.UpdateHintMesh(currentHintObj, true);
                 }
             }
         }
+
+        //if(hintName == "Hint_Left_7_10_0_modified")
+        //{
+        //    GameObject overlapObj = GameObject.Find("Hint_Top_0_3_0_modified");
+        //    buildingSystemBase.UpdateHintMesh(overlapObj, true);
+        //}
+
     }
 }
