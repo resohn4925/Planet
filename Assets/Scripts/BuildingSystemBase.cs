@@ -95,7 +95,8 @@ public class BuildingSystemBase : MonoBehaviour
     /// <summary>
     /// 计算可放置的位置
     /// </summary>
-    public void CalculateHint(MarchingCube marchingCube)
+    // 修改方法签名：新增模式参数
+    public void CalculateHint(MarchingCube marchingCube, BuildingMode currentMode)
     {
         if (marchingCube == null || marchingCube.marchingCubeDatas == null || marchingCube.marchingCubeDatas.Count == 0)
         {
@@ -108,45 +109,37 @@ public class BuildingSystemBase : MonoBehaviour
             var hintArray = data.hintObjPointArray;
             var objArray = data.objPointArray;
 
-            // 校验当前data的数组是否为空
             if (hintArray == null || objArray == null)
             {
-                Debug.LogError($"CubeFace {data.cubeFace} 的hintObjPointArray或objPointArray为空！");
-                continue; // 跳过当前data
+                Debug.LogError($"CubeFace {data.cubeFace} 的hint/obj数组为空！");
+                continue;
             }
 
-            // 获取当前data三维数组的维度长度
             int xSize = hintArray.GetLength(0);
             int zSize = hintArray.GetLength(1);
             int ySize = hintArray.GetLength(2);
 
-            // 遍历当前data的所有x、z、y维度的点，按规则激活hint
             for (int x = 0; x < xSize; x++)
             {
                 for (int z = 0; z < zSize; z++)
                 {
                     for (int y = 0; y < ySize; y++)
                     {
-                        if (y == 0)
+                        if (currentMode == BuildingMode.Build)
                         {
-                            // y=0时，当前data的该点激活
-                            hintArray[x, z, y].isActive = true;
+                            // 建造模式规则：y=0激活，y>0继承下层状态
+                            hintArray[x, z, y].isActive = y == 0
+                                ? true
+                                : (y - 1 >= 0 && x < objArray.GetLength(0) && z < objArray.GetLength(1) && y - 1 < objArray.GetLength(2))
+                                    ? objArray[x, z, y - 1].isActive
+                                    : false;
                         }
-                        else
+                        else if (currentMode == BuildingMode.Destroy)
                         {
-                            if (y - 1 >= 0 &&
-                                x < objArray.GetLength(0) &&
-                                z < objArray.GetLength(1) &&
-                                y - 1 < objArray.GetLength(2))
-                            {
-                                // y>0时，激活状态继承自当前data下y-1层的对应点
-                                hintArray[x, z, y].isActive = objArray[x, z, y - 1].isActive;
-                            }
-                            else
-                            {
-                                hintArray[x, z, y].isActive = false;
-                                Debug.LogWarning($"CubeFace {data.cubeFace} 上[{x}, {z}, {y}] 下方层索引越界，无法激活hint！");
-                            }
+                            // 销毁模式规则：仅已激活的地块显示Hint
+                            hintArray[x, z, y].isActive = (x < objArray.GetLength(0) && z < objArray.GetLength(1) && y < objArray.GetLength(2))
+                                ? objArray[x, z, y].isActive
+                                : false;
                         }
                     }
                 }
@@ -214,9 +207,69 @@ public class BuildingSystemBase : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 取消激活顶点（销毁模式核心逻辑）
+    /// </summary>
+    public void DeactivateModule(string hintName, MarchingCube marchingCube)
+    {
+        try
+        {
+            string[] parts = hintName.Split('_');
+            if (parts.Length < 5)
+            {
+                Debug.LogError($"Hint名称格式错误: {hintName}");
+                return;
+            }
+
+            // 解析Hint名称（和建造模式逻辑一致）
+            CubeFace face = (CubeFace)System.Enum.Parse(typeof(CubeFace), parts[1], true);
+            int xIndex = int.Parse(parts[2]);
+            int zIndex = int.Parse(parts[3]);
+            int yIndex = int.Parse(parts[4]);
+
+            // 查找对应面的MarchingCubeData
+            var targetData = marchingCube.marchingCubeDatas.FirstOrDefault(d => d.cubeFace == face);
+            if (targetData == null)
+            {
+                Debug.LogError($"未找到面{face}的MarchingCubeData");
+                return;
+            }
+
+            // 校验索引并取消激活（同步重合点）
+            if (xIndex >= 0 && xIndex < targetData.objPointArray.GetLength(0) &&
+                zIndex >= 0 && zIndex < targetData.objPointArray.GetLength(1) &&
+                yIndex >= 0 && yIndex < targetData.objPointArray.GetLength(2))
+            {
+                var targetPipeline = FindObjectsOfType<PlanetPipeline>().FirstOrDefault(p => p.name == "PlanetPipeline");
+                if (targetPipeline == null)
+                {
+                    Debug.LogError("找不到PlanetPipeline！");
+                    return;
+                }
+                // 调用SetOverlapPoint并标记为销毁（取消激活）
+                targetPipeline.SetOverlapPoint((int)face, xIndex, zIndex, yIndex, isDestroy: true);
+                Debug.Log($"销毁{face}上的点: [{xIndex}, {zIndex}, {yIndex}]");
+            }
+            else
+            {
+                Debug.LogError($"点[{xIndex}, {zIndex}, {yIndex}]索引越界");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"销毁{hintName}失败: {ex.Message}");
+        }
+    }
+
     public void UpdateModule(MarchingCube marchingCube)
     {
         marchingCube.UpdateModules(marchingCube.marchingCubeDatas[0]);
     }
     #endregion
+}
+
+public enum BuildingMode
+{
+    Build,    // 建造模式
+    Destroy   // 销毁模式
 }

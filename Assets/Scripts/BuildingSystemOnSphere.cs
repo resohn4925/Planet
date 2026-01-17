@@ -12,6 +12,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
     [HideInInspector] public MarchingCube marchingCube;
     public ModifyMesh3d modifyMesh3D;
 
+    //编辑模式
+    public BuildingMode currentBuildingMode = BuildingMode.Build;
+
     public GameObject hintObj;
     public GameObject modifiedHintRoot;
 
@@ -84,7 +87,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
     public void UpdateHint()
     {
-        buildingSystemBase.CalculateHint(marchingCube);
+        buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
         marchingCube.UpdateHint(marchingCube);
         ModifyAllHintModules();
     }
@@ -128,7 +131,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
             if (e.type == EventType.MouseDown && e.button == 0)
             {
                 //获取currentHitObj的索引，根据索引激活基础obj
-                buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                if (currentBuildingMode == BuildingMode.Build)
+                {
+                    buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                }
+                else if (currentBuildingMode == BuildingMode.Destroy)
+                {
+                    buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
+                }
 
                 CreateModule();
                 e.Use();
@@ -391,5 +401,15 @@ public class BuildingSystemOnSphere : MonoBehaviour
         //    buildingSystemBase.UpdateHintMesh(overlapObj, true);
         //}
 
+    }
+
+    public void SwitchBuildingMode(BuildingMode mode)
+    {
+        currentBuildingMode = mode;
+
+        if (isEditing)
+        {
+            UpdateHint();
+        }
     }
 }

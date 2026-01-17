@@ -561,7 +561,7 @@ namespace Planet
         /// <summary>
         /// 设置所有重合点的信息
         /// </summary>
-        public void SetOverlapPoint(int faceIndex, int x, int y, int z)
+        public void SetOverlapPoint(int faceIndex, int x, int y, int z, bool isDestroy = false)
         {
             Vector3 pos = marchingCube.marchingCubeDatas[faceIndex].objPointArray[x, y, 0].pos;
             foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
@@ -570,13 +570,20 @@ namespace Planet
                 {
                     if (objPointData.pos == pos)
                     {
-                        marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, z].isActive = isActivate;
+                        // 销毁模式
+                        marchingCubeData.objPointArray[objPointData.xIndex, objPointData.zIndex, z].isActive = !isDestroy;
                     }
                 }
             }
+            // 同步更新
+            marchingCube.marchingCubeDatas[faceIndex].objPointArray[x, y, z].isActive = !isDestroy;
         }
 
-
+        // 兼容
+        public void SetOverlapPoint(int faceIndex, int x, int y, int z)
+        {
+            SetOverlapPoint(faceIndex, x, y, z, false);
+        }
 
         public void ClearAllModules()
         {

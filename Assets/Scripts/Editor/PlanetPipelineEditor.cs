@@ -26,18 +26,33 @@ public class PlanetPipelineEditor : Editor
             planetPipeline.Save();
         }
 
-        if (GUILayout.Button("激活物件"))
-        {
-            planetPipeline.ActivateObj();
-        }
+        //if (GUILayout.Button("激活物件"))
+        //{
+        //    planetPipeline.ActivateObj();
+        //}
 
-        if (GUILayout.Button("生成物件"))
-        {
-            planetPipeline.GenerateObj();
-        }
+        //if (GUILayout.Button("生成物件"))
+        //{
+        //    planetPipeline.GenerateObj();
+        //}
 
          bool isEditing = planetPipeline.isEditing;
         string buttonText = isEditing ? "结束编辑" : "开始编辑";
+
+        if (planetPipeline.buildingSystemOnSphere != null)
+        {
+            string modeText = planetPipeline.buildingSystemOnSphere.currentBuildingMode == BuildingMode.Build
+                ? "切换到销毁模式"
+                : "切换到建造模式";
+            if (GUILayout.Button(modeText))
+            {
+                var newMode = planetPipeline.buildingSystemOnSphere.currentBuildingMode == BuildingMode.Build
+                    ? BuildingMode.Destroy
+                    : BuildingMode.Build;
+                planetPipeline.buildingSystemOnSphere.SwitchBuildingMode(newMode);
+                Debug.Log($"已切换到{(newMode == BuildingMode.Build ? "建造" : "销毁")}模式");
+            }
+        }
 
         if (GUILayout.Button(buttonText))
         {
