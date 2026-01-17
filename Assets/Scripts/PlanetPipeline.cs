@@ -31,11 +31,12 @@ namespace Planet
         public bool isActivate;
         public bool showVerts;
         public bool showMeshs;
+        public bool activeSurround = false;
 
         [Header("Prefab")]
         public GameObject light;
 
-        [HideInInspector]public bool isEditing;
+        [HideInInspector] public bool isEditing;
 
         private List<Vector3> modifyPointPos = new();
         private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
@@ -112,7 +113,7 @@ namespace Planet
 
         public void SetAllModifyPointDatas()
         {
-            foreach(var meshData in meshGenerator.meshDataList)
+            foreach (var meshData in meshGenerator.meshDataList)
             {
                 SetAllModifyModuleDatas(meshData);
                 SetAllModifyPointDatas(meshData);
@@ -127,7 +128,7 @@ namespace Planet
         {
             if (columnsPerFace == -2) return;
             else
-                height = 40f / (columnsPerFace + 2);
+                height = (float)meshSize / (columnsPerFace + 2);
             int verNum = meshGenerator.meshNum + 1;
 
             modifyPointPos.Clear();
@@ -217,7 +218,7 @@ namespace Planet
         public void SetAllModifyPointDatas(MeshData meshData)
         {
             if (columnsPerFace == -2) return;
-            height = 40f / (columnsPerFace + 2);
+            height = (float)meshSize / (columnsPerFace + 2);
             int verNum = meshGenerator.meshNum + 1;
             int maxIndex = verNum - 1;
 
@@ -484,6 +485,56 @@ namespace Planet
 
         public void ActivateObj()
         {
+            //测试逻辑
+            if (this.activeSurround)
+            {
+                int x = activeObjXIndex;
+                int y = activeObjYIndex;
+                int z = activeObjZIndex;
+                Face currentFace = (Face)(faceIndex + 1);
+
+                // 1. 激活核心点
+                marchingCube.marchingCubeDatas[faceIndex].objPointArray[x, y, z].isActive = isActivate;
+
+                // 2. 激活周围点（实点）- 解决逻辑连通
+                List<Vector3> surroundPoints = UCalculate.CalculateSurroundPoint(new Vector3(x, y, z), currentFace, columnsPerFace);
+
+                Debug.Log($"<color=green>=== 开始激活 [{faceIndex}, {x}, {y}] 的周围点 ===</color>"); // 方便在控制台区分每一组
+
+                foreach (Vector3 p in surroundPoints)
+                {
+                    int nFaceIdx = (int)p.z - 1;
+                    int nx = (int)p.x;
+                    int ny = (int)p.y;
+
+                    if (nFaceIdx >= 0 && nFaceIdx < 6)
+                    {
+                        // 打印详细信息：也就是它激活了 "第几个面" 的 "X, Y" 坐标
+                        Debug.Log($"激活周围点 -> Face: {nFaceIdx}, Pos: ({nx}, {ny}, {z})");
+
+                        // 确保不越界
+                        marchingCube.marchingCubeDatas[nFaceIdx].objPointArray[nx, ny, z].isActive = isActivate;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"计算出的周围点面索引越界或无效: Face {nFaceIdx}");
+                    }
+                }
+
+                // // 3. 激活桥梁点 (当前面的虚点 0 或 size+1)
+                // // 这一步是为了让 Marching Cube 在当前面渲染时，网格能闭合到边缘
+                // List<Vector3> bridgePoints = UCalculate.CalculateBridge(new Vector3(x, y, z), currentFace, marchingCube.marchingCubeDatas.ToArray(), columnsPerFace);
+                // foreach (Vector3 b in bridgePoints)
+                // {
+                //     int bx = (int)b.x;
+                //     int by = (int)b.y;
+                //     int bz = (int)b.z;
+
+                //     // 激活当前面的边缘虚点
+                //     marchingCube.marchingCubeDatas[faceIndex].objPointArray[bx, by, bz].isActive = isActivate;
+                // }
+                //测试逻辑结束
+            }
             SetOverlapPoint(faceIndex, activeObjXIndex, activeObjYIndex, activeObjZIndex);
         }
 
@@ -494,16 +545,16 @@ namespace Planet
         }
 
         //需要约定faceIndex=几
-        public void OnClick(int xIndex, int yIndex,int zIndex,Face faceIndex,BuildingType type)
+        public void OnClick(int xIndex, int yIndex, int zIndex, Face faceIndex, BuildingType type)
         {
             //共用逻辑
-            marchingCube.marchingCubeDatas[(int)faceIndex].objPointArray[xIndex,yIndex, zIndex].isActive=true;
+            marchingCube.marchingCubeDatas[(int)faceIndex].objPointArray[xIndex, yIndex, zIndex].isActive = true;
             //美术逻辑
             //计算出因为新建筑而生成的桥梁点
-            List<Vector3> bridgePoint=UCalculate.CalculateBridge(new Vector3(xIndex,yIndex,zIndex),faceIndex,this.marchingCube.marchingCubeDatas.ToArray(),3);
+            List<Vector3> bridgePoint = UCalculate.CalculateBridge(new Vector3(xIndex, yIndex, zIndex), faceIndex, this.marchingCube.marchingCubeDatas.ToArray(), 3);
             //计分逻辑
-            
-           
+
+
         }
 
 
@@ -564,7 +615,7 @@ namespace Planet
 
         public void ModifyAllModules()
         {
-            foreach(var marchingCubeData in marchingCube.marchingCubeDatas)
+            foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
             {
                 ModifyModule(marchingCubeData);
             }
