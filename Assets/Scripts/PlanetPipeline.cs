@@ -88,17 +88,31 @@ namespace Planet
 
         public void CreateRoot()
         {
-            root = GameObject.Find("Root");
-            if (root != null)
+            // 查找所有名为 "Root" 的节点，包括隐藏的
+            GameObject[] rootObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            root = null;
+            foreach (GameObject obj in rootObjects)
             {
-                DestroyImmediate(root);
+                if (obj.name == "Root" && obj.scene.IsValid()) // 确保是场景中的对象，不是预制体
+                {
+                    root = obj;
+                    break;
+                }
             }
-            root = new GameObject("Root");
-            // 创建后立即将 Root 节点设置为不可见，这样它的子物件也会不可见
-            root.SetActive(false);
-            marchingCube.moduleCollection = root;
 
-            Debug.Log("创建 Root 节点并设置为不可见");
+            if (root == null)
+            {
+                root = new GameObject("Root");
+                // 创建后立即将 Root 节点设置为不可见，这样它的子物件也会不可见
+                root.SetActive(false);
+                Debug.Log("创建 Root 节点并设置为不可见");
+            }
+            else
+            {
+                // 复用已存在的 Root 节点
+                Debug.Log("复用已存在的 Root 节点");
+            }
+            marchingCube.moduleCollection = root;
         }
 
         public void CreateModifiedRoot()
