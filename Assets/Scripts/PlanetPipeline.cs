@@ -94,9 +94,11 @@ namespace Planet
                 DestroyImmediate(root);
             }
             root = new GameObject("Root");
+            // 创建后立即将 Root 节点设置为不可见，这样它的子物件也会不可见
+            root.SetActive(false);
             marchingCube.moduleCollection = root;
 
-            Debug.Log("创建 Root 节点");
+            Debug.Log("创建 Root 节点并设置为不可见");
         }
 
         public void CreateModifiedRoot()

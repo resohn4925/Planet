@@ -177,16 +177,38 @@ public class BuildingSystemBase : MonoBehaviour
             return;
         }
 
+        // 隐藏或显示所有子物件的渲染器
         MeshRenderer[] meshRenderers = hintRoot.GetComponentsInChildren<MeshRenderer>(true);
-
-        if (meshRenderers.Length == 0)
+        if (meshRenderers.Length > 0)
         {
-            return;
+            foreach (MeshRenderer renderer in meshRenderers)
+            {
+                renderer.enabled = isVisible;
+            }
         }
 
-        foreach (MeshRenderer renderer in meshRenderers)
+        // 隐藏所有子物件的碰撞器（针对 hintroot）
+        if (rootName == "HintRoot")
         {
-            renderer.enabled = isVisible;
+            // 处理 BoxCollider（hint 物件使用的碰撞器）
+            BoxCollider[] boxColliders = hintRoot.GetComponentsInChildren<BoxCollider>(true);
+            if (boxColliders.Length > 0)
+            {
+                foreach (BoxCollider collider in boxColliders)
+                {
+                    collider.enabled = false;
+                }
+            }
+            
+            // 同时处理 MeshCollider（以防万一）
+            MeshCollider[] meshColliders = hintRoot.GetComponentsInChildren<MeshCollider>(true);
+            if (meshColliders.Length > 0)
+            {
+                foreach (MeshCollider collider in meshColliders)
+                {
+                    collider.enabled = false;
+                }
+            }
         }
     }
 
