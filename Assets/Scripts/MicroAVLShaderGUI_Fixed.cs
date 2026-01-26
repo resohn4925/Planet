@@ -9,9 +9,9 @@ namespace AkiDevCat.MicroAVL.Editor
     public class MicroAVLMaterialEditor : ShaderGUI
     {
         private enum BlendMode { Additive, Premultiply }
-
+        
         private const string AssetStoreURL = "https://assetstore.unity.com/packages/vfx/shaders/fullscreen-camera-effects/analytical-volumetric-lighting-urp-performant-raytraced-volumetr-266586";
-
+        
         private MaterialProperty _colorProperty;
         private MaterialProperty _intensityProperty;
         private MaterialProperty _scatteringProperty;
@@ -21,7 +21,7 @@ namespace AkiDevCat.MicroAVL.Editor
         private bool _lightPropertiesFoldout = true;
         private bool _blendPropertiesFoldout = true;
         private bool _renderPropertiesFoldout = true;
-
+        
         private void FindProperties(MaterialProperty[] properties)
         {
             _colorProperty = FindProperty("_Color", properties);
@@ -30,8 +30,8 @@ namespace AkiDevCat.MicroAVL.Editor
             _rampPowerProperty = FindProperty("_RampPower", properties);
             _blinkingAmplitudeProperty = FindProperty("_BlinkingAmplitude", properties);
         }
-
-        // ºÊ»›Unity 3.14µƒ’€µ˛√Ê∞Â µœ÷
+        
+        // ÂÖºÂÆπUnity 3.14ÁöÑÊäòÂè†Èù¢ÊùøÂÆûÁé∞
         private bool DrawHeaderFoldout(string title, bool foldout)
         {
             EditorGUILayout.BeginHorizontal();
@@ -39,26 +39,26 @@ namespace AkiDevCat.MicroAVL.Editor
             EditorGUILayout.EndHorizontal();
             return foldout;
         }
-
-        public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
+        
+        public override void OnGUI (MaterialEditor materialEditorIn, MaterialProperty[] properties)
         {
             var material = (Material)materialEditorIn.target;
             FindProperties(properties);
-
+            
             var style = new GUIStyle("AM MixerHeader")
             {
                 alignment = TextAnchor.MiddleCenter
             };
-
+        
             EditorGUILayout.Space(15.0f);
             EditorGUILayout.LabelField("MicroAVL Point Light", new GUIStyle(style));
             EditorGUILayout.Space(15.0f);
-
+        
             if (((Material)materialEditorIn.target).name == "M_DefaultLight")
             {
                 GUI.enabled = false;
             }
-
+            
             _lightPropertiesFoldout = DrawHeaderFoldout("Light Properties", _lightPropertiesFoldout);
             if (_lightPropertiesFoldout)
             {
@@ -66,9 +66,9 @@ namespace AkiDevCat.MicroAVL.Editor
                 DrawSurfaceInputs(material, materialEditorIn);
                 EditorGUI.indentLevel--;
             }
-
+            
             EditorGUILayout.Space(5.0f);
-
+            
             _blendPropertiesFoldout = DrawHeaderFoldout("Blend Properties", _blendPropertiesFoldout);
             if (_blendPropertiesFoldout)
             {
@@ -78,7 +78,7 @@ namespace AkiDevCat.MicroAVL.Editor
                 var mode = material.shader.name == "Shader Graphs/MicroAVL_OmniLight_Premultiply" ? BlendMode.Premultiply : BlendMode.Additive;
 
                 mode = (BlendMode)EditorGUILayout.EnumPopup("Blend Mode", mode);
-
+                
                 if (EditorGUI.EndChangeCheck())
                 {
                     var newShader = Shader.Find(mode == BlendMode.Premultiply ? "Shader Graphs/MicroAVL_OmniLight_Premultiply" : "Shader Graphs/MicroAVL_OmniLight_Additive");
@@ -92,36 +92,36 @@ namespace AkiDevCat.MicroAVL.Editor
                 {
                     EditorGUILayout.HelpBox("Premultiply light sources might conflict when intersecting each other.", MessageType.Info);
                 }
-
+                
                 EditorGUI.indentLevel--;
             }
-
+            
             EditorGUILayout.Space(5.0f);
-
+            
             _renderPropertiesFoldout = DrawHeaderFoldout("Render Properties", _renderPropertiesFoldout);
             if (_renderPropertiesFoldout)
             {
                 EditorGUI.indentLevel++;
                 materialEditorIn.EnableInstancingField();
-                // Unity 3.14ºÊ»›µƒ‰÷»æ∂”¡–◊÷∂Œ
+                // Unity 3.14ÂÖºÂÆπÁöÑÊ∏≤ÊüìÈòüÂàóÂ≠óÊÆµ
                 materialEditorIn.RenderQueueField();
                 EditorGUI.indentLevel--;
             }
-
+        
             if (!GUI.enabled)
             {
                 GUI.enabled = true;
                 EditorGUILayout.Space(15.0f);
-                EditorGUILayout.LabelField("Default Material Editing is Disabled", new GUIStyle("BoldLabel") { alignment = TextAnchor.MiddleCenter });
+                EditorGUILayout.LabelField("Default Material Editing is Disabled", new GUIStyle("BoldLabel") { alignment = TextAnchor.MiddleCenter});
             }
-
+            
             EditorGUILayout.Space(10.0f);
             var rect = EditorGUILayout.GetControlRect(false, 300);
             rect.min -= new Vector2(15, 0);
             materialEditorIn.DrawPreview(rect);
-
+            
             EditorGUILayout.Space(5.0f);
-
+            
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (EditorGUILayout.LinkButton("Check out our full Analytical Volumetric"))
@@ -130,7 +130,7 @@ namespace AkiDevCat.MicroAVL.Editor
             }
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
-
+            
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (EditorGUILayout.LinkButton("Lighting package on the Asset Store"))
@@ -139,10 +139,10 @@ namespace AkiDevCat.MicroAVL.Editor
             }
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
-
+            
             EditorGUILayout.Space(5.0f);
         }
-
+        
         private void DrawSurfaceInputs(Material material, MaterialEditor materialEditor)
         {
             materialEditor.ColorProperty(_colorProperty, "Color");
@@ -155,7 +155,7 @@ namespace AkiDevCat.MicroAVL.Editor
             materialEditor.FloatProperty(_rampPowerProperty, "Ramp Power");
             if (_scatteringProperty.floatValue < 0)
                 _scatteringProperty.floatValue = 0;
-
+        
             DrawKeywordProperty(new GUIContent("Enable HDR Correction"), "_ENABLE_HDR_CORRECTION", material);
             DrawKeywordProperty(new GUIContent("Enable Blinking"), "_ENABLE_BLINKING", material);
 
@@ -164,7 +164,7 @@ namespace AkiDevCat.MicroAVL.Editor
                 materialEditor.RangeProperty(_blinkingAmplitudeProperty, "Blinking Amplitude");
             }
         }
-
+        
         private static void DrawKeywordProperty(GUIContent styles, string keywordName, Material material)
         {
             EditorGUI.BeginChangeCheck();
