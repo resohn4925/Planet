@@ -21,9 +21,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
     private bool isEditing = false;
     private GameObject lastHitObj = null;
     private float _hintModifyHeight = 3.636364f;
+    private Vector3 lastClickPosition;
 
-    //测试用变量
-    //public GameObject testHintObj;
+    private RippleEffectURP rippleEffect;
 
 
     public void Init(MarchingCube marchingCube)
@@ -170,6 +170,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
                 if (e.type == EventType.MouseDown && e.button == 0)
                 {
+                    // 获取精确的点击位置（鼠标与hint网格的交点）
+                    lastClickPosition = GetHitPoint(ray, currentHitObj);
+
                     //获取currentHitObj的索引，根据索引激活基础obj
                     if (currentBuildingMode == BuildingMode.Build)
                     {
@@ -223,6 +226,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
         UpdateHint();
         ClearAllModifiedHints();
         ModifyAllHintModules();
+
+        // 触发波纹效果
+        TriggerRippleEffect();
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -448,5 +454,57 @@ public class BuildingSystemOnSphere : MonoBehaviour
         {
             UpdateHint();
         }
+    }
+
+    private void TriggerRippleEffect()
+    {
+        if (rippleEffect == null)
+        {
+            rippleEffect = FindObjectOfType<RippleEffectURP>();
+            if (rippleEffect == null)
+            {
+                Debug.LogWarning("未找到RippleEffectURP组件，无法触发波纹效果");
+                return;
+            }
+        }
+
+        rippleEffect.ActivateRipple(lastClickPosition);
+    }
+
+    private Vector3 GetHitPoint(Ray ray, GameObject targetObj)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+
+        foreach (RaycastHit hit in hits)
+        {
+            GameObject hitObj = hit.collider.gameObject;
+
+            if (hitObj == targetObj)
+            {
+                return hit.point;
+            }
+
+            if (hitObj.name.StartsWith("Hint_") && hitObj.name.Contains("_modified"))
+            {
+                return hit.point;
+            }
+        }
+
+        foreach (RaycastHit hit in hits)
+        {
+            GameObject hitObj = hit.collider.gameObject;
+
+            if (hitObj.name.StartsWith("Hint_"))
+            {
+                return hit.point;
+            }
+        }
+
+        if (targetObj != null)
+        {
+            return targetObj.transform.position;
+        }
+
+        return Vector3.zero;
     }
 }

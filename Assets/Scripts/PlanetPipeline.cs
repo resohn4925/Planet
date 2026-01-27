@@ -13,6 +13,7 @@ namespace Planet
         public MarchingCube marchingCube;
         public ModifyMesh3d modifyMesh3D;
         public BuildingSystemOnSphere buildingSystemOnSphere;
+        public RippleEffectURP rippleEffectURP;
 
         [Header("网格生成参数")]
         public int columnsPerFace;//每面行数
@@ -63,6 +64,8 @@ namespace Planet
             buildingSystemOnSphere.Init(marchingCube);
             //如果还在编辑模式，先退出
             buildingSystemOnSphere.SwitchEditMode(false);
+
+            rippleEffectURP.Init();
 
             GenerateMesh();
             InitMarchingData();

@@ -1,3 +1,5 @@
+using UnityEditor;
+using UnityEditor.TerrainTools;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -35,8 +37,6 @@ public class RippleEffectURP : MonoBehaviour
     [SerializeField]
     private Shader shader;
 
-    public GameObject targetObject;
-    private MeshFilter _meshFilter;
     public bool activation = false;
 
     private Material material;
@@ -46,14 +46,17 @@ public class RippleEffectURP : MonoBehaviour
     class Droplet
     {
         float time;
-        MeshFilter _meshFilter;
-        GameObject _targetObject;
+        Vector3 worldPosition;
 
-        public Droplet(MeshFilter meshFilter, GameObject targetObject)
+        public Droplet()
         {
-            time = 1000;
-            _meshFilter = meshFilter;
-            _targetObject = targetObject;
+            time = -1000;
+            worldPosition = Vector3.zero;
+        }
+
+        public void SetWorldPosition(Vector3 position)
+        {
+            worldPosition = position;
         }
 
         public void Reset()
@@ -68,33 +71,89 @@ public class RippleEffectURP : MonoBehaviour
 
         public Vector4 MakeShaderParameter(float aspect)
         {
-            var _position = CalculateScreenUV(_meshFilter);
+            var _position = CalculateScreenUV(worldPosition);
             return new Vector4(_position.x * aspect, _position.y, time, 0);
         }
 
-        Vector2 CalculateScreenUV(MeshFilter meshFilter)
+        Vector2 CalculateScreenUV(Vector3 worldPos)
         {
-            if (!_targetObject || !meshFilter || !Camera.main)
+            Camera camera = GetSceneViewCamera();
+            if (camera == null)
                 return Vector2.zero;
 
-            Vector3 meshCenter = meshFilter.sharedMesh.bounds.center;
-            Vector3 worldCenter = _targetObject.transform.TransformPoint(meshCenter);
-            Vector3 viewportPoint = Camera.main.WorldToViewportPoint(worldCenter);
+            Vector3 viewportPoint = camera.WorldToViewportPoint(worldPos);
             return new Vector2(viewportPoint.x, viewportPoint.y);
+        }
+
+        Camera GetSceneViewCamera()
+        {
+            #if UNITY_EDITOR
+            foreach (SceneView sceneView in SceneView.sceneViews)
+            {
+                if (sceneView.camera != null)
+                    return sceneView.camera;
+            }
+            #endif
+            return Camera.main;
         }
     }
 
     private Droplet droplet;
 
-    void Awake()
+    private void OnEnable()
     {
-        if (targetObject)
-            _meshFilter = targetObject.GetComponent<MeshFilter>();
+        //Init();
 
-        droplet = new Droplet(_meshFilter, targetObject);
+        // 注册编辑器模式下的更新
+        #if UNITY_EDITOR
+        EditorApplication.update += EditorUpdate;
+        #endif
+    }
+
+    private void OnDisable()
+    {
+        // 注销编辑器模式下的更新
+        #if UNITY_EDITOR
+        EditorApplication.update -= EditorUpdate;
+        #endif
+    }
+
+    private void EditorUpdate()
+    {
+        if (!Application.isPlaying)
+        {
+            // 编辑器模式下的更新逻辑
+            if (!material) return;
+
+            if (activation)
+            {
+                if (timer <= 2.0f)
+                {
+                    droplet.Update();
+                    UpdateShaderParameters();
+                    timer += Time.deltaTime;
+                    // 强制重绘场景视图
+                    SceneView.RepaintAll();
+                }
+                if (timer > 2.0f)
+                {
+                    activation = false;
+                }
+            }
+            else
+            {
+                timer = 0.0f;
+                droplet.Reset();
+            }
+        }
+    }
+
+    public void Init()
+    {
+        droplet = new Droplet();
         droplet.Reset();
 
-        // �����ݶ�����
+        // 创建梯度纹理
         gradTexture = new Texture2D(2048, 1, TextureFormat.RGBA32, false);
         gradTexture.wrapMode = TextureWrapMode.Clamp;
         gradTexture.filterMode = FilterMode.Bilinear;
@@ -107,15 +166,35 @@ public class RippleEffectURP : MonoBehaviour
         }
         gradTexture.Apply();
 
-        // ��������
+        // 如果shader未设置，尝试自动查找
+        if (shader == null)
+        {
+            shader = Shader.Find("Hidden/RippleEffect");
+            if (shader == null)
+            {
+                Debug.LogError("未找到RippleEffect shader，请在Inspector中手动设置shader字段");
+                return;
+            }
+            else
+            {
+                Debug.Log("成功找到RippleEffect shader");
+            }
+        }
+
+        // 创建材质
         if (shader)
         {
             material = new Material(shader);
             material.hideFlags = HideFlags.DontSave;
             material.SetTexture("_GradTex", gradTexture);
 
-            // ���ò��ʵ���Ⱦͨ��
+            // 设置材质实例到渲染通道
             RippleEffectRenderPass.SetMaterial(material);
+            Debug.Log("RippleEffect材质已创建并设置到渲染通道");
+        }
+        else
+        {
+            Debug.LogError("shader为空，无法创建材质");
         }
     }
 
@@ -136,19 +215,17 @@ public class RippleEffectURP : MonoBehaviour
                 activation = false;
             }
         }
-        else
-        {
-            timer = 0.0f;
-            droplet.Reset();
-        }
     }
 
     void UpdateShaderParameters()
     {
-        if (!material || !Camera.main)
+        if (!material) return;
+
+        Camera camera = GetCamera();
+        if (camera == null)
             return;
 
-        var c = Camera.main;
+        var c = camera;
 
         material.SetVector("_radius", new Vector4(radius, 0.0f, 0.0f, 0.0f));
         material.SetVector("_Drop1", droplet.MakeShaderParameter(c.aspect));
@@ -160,6 +237,18 @@ public class RippleEffectURP : MonoBehaviour
         material.SetVector("_Params2", new Vector4(1, 1 / c.aspect, refractionStrength, reflectionStrength));
     }
 
+    Camera GetCamera()
+    {
+        #if UNITY_EDITOR
+        foreach (SceneView sceneView in SceneView.sceneViews)
+        {
+            if (sceneView.camera != null)
+                return sceneView.camera;
+        }
+        #endif
+        return Camera.main;
+    }
+
     void OnDestroy()
     {
         if (material)
@@ -168,13 +257,19 @@ public class RippleEffectURP : MonoBehaviour
         if (gradTexture)
             DestroyImmediate(gradTexture);
 
-        // ������������
         RippleEffectRenderPass.SetMaterial(null);
     }
 
-    // �����ֶ���������Ч��
-    public void ActivateRipple()
+    //public void ActivateRipple()
+    //{
+    //    activation = true;
+    //    timer = 0f;
+    //    droplet.Reset();
+    //}
+
+    public void ActivateRipple(Vector3 worldPosition)
     {
+        droplet.SetWorldPosition(worldPosition);
         activation = true;
         timer = 0f;
         droplet.Reset();

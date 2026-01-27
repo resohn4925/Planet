@@ -22,7 +22,7 @@ public class RippleEffectRenderPass : ScriptableRenderPass
     {
         if (rippleMaterial == null)
         {
-            Debug.LogWarning("Ripple material is null.");
+            //Debug.LogWarning("Ripple material is null.");
             return;
         }
 
