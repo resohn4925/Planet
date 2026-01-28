@@ -87,9 +87,11 @@ public class BuildingSystemOnSphere : MonoBehaviour
     {
         buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
         marchingCube.UpdateHint(marchingCube);
-        // 隐藏原始 hint 物件的渲染器，只显示 modifiedhint
+        // 隐藏hint的mesh
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
         ModifyAllHintModules();
+        // 隐藏modiefiedhint的mesh
+        buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
     }
 
     private void OnSceneGUI(SceneView sceneView)
@@ -255,6 +257,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             if (objName.StartsWith("Hint_"))
             {
                 ModifyHintModule(objName, childObj);
+                //
             }
         }
     }
