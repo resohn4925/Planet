@@ -85,6 +85,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
     public void UpdateHint()
     {
+        //计算上一次更新时哪些点被激活
+
+
         buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
         marchingCube.UpdateHint(marchingCube);
         // 隐藏原始 hint 物件的渲染器，只显示 modifiedhint
@@ -114,100 +117,98 @@ public class BuildingSystemOnSphere : MonoBehaviour
             Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
             GameObject currentHitObj = null;
 
-            // 获取鼠标悬停的对象，优先选择modifiedhintmesh
-            RaycastHit[] hits = Physics.RaycastAll(ray);
+
+        // 获取鼠标悬停的对象，优先选择modifiedhintmesh
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+
+        // 按距离排序，近的在前
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        // 优先选择modifiedhintmesh（名称以"Hint_"开头且包含"_modified"的对象）
+        foreach (RaycastHit hit in hits)
+        {
+            GameObject hitObj = hit.collider.gameObject;
+            if (hitObj.name.StartsWith("Hint_") && hitObj.name.Contains("_modified"))
+            {
+                currentHitObj = hitObj;
+                break;
+            }
+        }
+
+        // 如果没有找到modifiedhintmesh，再尝试找到普通的hintmesh
+        if (currentHitObj == null)
+        {
             foreach (RaycastHit hit in hits)
             {
                 GameObject hitObj = hit.collider.gameObject;
-                // 优先选择modifiedhintmesh（名称以"Hint_"开头且包含"_modified"的对象）
-                if (hitObj.name.StartsWith("Hint_") && hitObj.name.Contains("_modified"))
+                // 选择普通的hintmesh（名称以"Hint_"开头的对象）
+                if (hitObj.name.StartsWith("Hint_"))
                 {
                     currentHitObj = hitObj;
                     break;
                 }
             }
-            
-            // 如果没有找到modifiedhintmesh，再尝试找到普通的hintmesh
-            if (currentHitObj == null)
-            {
-                foreach (RaycastHit hit in hits)
-                {
-                    GameObject hitObj = hit.collider.gameObject;
-                    // 选择普通的hintmesh（名称以"Hint_"开头的对象）
-                    if (hitObj.name.StartsWith("Hint_"))
-                    {
-                        currentHitObj = hitObj;
-                        break;
-                    }
-                }
-            }
-
-            // 如果没有找到hintmesh，再使用普通的Raycast
-            if (currentHitObj == null)
-            {
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit))
-                {
-                    currentHitObj = hit.collider.gameObject;
-                }
-            }
-
-            // 处理命中对象
-            if (currentHitObj != null)
-            {
-                buildingSystemBase.GenerateHittedObj(currentHitObj);
-
-                buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
-                // 检查是否是原始 hint 物件，如果是则不显示
-                if (!currentHitObj.name.StartsWith("Hint_"))
-                {
-                    buildingSystemBase.UpdateHintMesh(currentHitObj, true);
-                }
-                //根据名字计算currentobj的face,x,y,z索引
-                //SetOverlapPoint逻辑计算该物件的overlap物件索引
-                //激活overlap物件
-                SetOverlapPoint(currentHitObj.name);
-
-                if (e.type == EventType.MouseDown && e.button == 0)
-                {
-                    // 获取精确的点击位置（鼠标与hint网格的交点）
-                    lastClickPosition = GetHitPoint(ray, currentHitObj);
-
-                    //获取currentHitObj的索引，根据索引激活基础obj
-                    if (currentBuildingMode == BuildingMode.Build)
-                    {
-                        buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
-                    }
-                    else if (currentBuildingMode == BuildingMode.Destroy)
-                    {
-                        buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
-                    }
-
-                    CreateModule();
-                    e.Use();
-                }
-            }
-
-            // 检测鼠标移出事件
-            if (lastHitObj != null && (currentHitObj == null || currentHitObj != lastHitObj))
-            {
-                OnMouseExitHitObj(lastHitObj);
-            }
-
-            if (e.type == EventType.Layout || e.type == EventType.Repaint)
-            {
-                if (needTakeControl)
-                {
-                    HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
-                }
-                else
-                {
-                    HandleUtility.AddDefaultControl(0);
-                }
-            }
-
-            lastHitObj = currentHitObj;
         }
+
+        // 如果没有找到hintmesh，选择第一个命中的对象
+        if (currentHitObj == null && hits.Length > 0)
+        {
+            currentHitObj = hits[0].collider.gameObject;
+        }
+
+        // 处理命中对象
+        if (currentHitObj != null)
+        {
+            buildingSystemBase.GenerateHittedObj(currentHitObj);
+
+            buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
+            // 检查是否是原始 hint 物件，如果是则不显示
+            if (!currentHitObj.name.StartsWith("Hint_"))
+            {
+                buildingSystemBase.UpdateHintMesh(currentHitObj, true);
+            }
+            //根据名字计算currentobj的face,x,y,z索引
+            //SetOverlapPoint逻辑计算该物件的overlap物件索引
+            //激活overlap物件
+            SetOverlapPoint(currentHitObj.name);
+
+            if (e.type == EventType.MouseDown && e.button == 0)
+            {
+                //获取currentHitObj的索引，根据索引激活基础obj
+                if (currentBuildingMode == BuildingMode.Build)
+                {
+                    buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                }
+                else if (currentBuildingMode == BuildingMode.Destroy)
+                {
+                    buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
+                }
+
+                CreateModule();
+                e.Use();
+            }
+        }
+
+        // 检测鼠标移出事件
+        if (lastHitObj != null && (currentHitObj == null || currentHitObj != lastHitObj))
+        {
+            OnMouseExitHitObj(lastHitObj);
+        }
+
+        if (e.type == EventType.Layout || e.type == EventType.Repaint)
+        {
+            if (needTakeControl)
+            {
+                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+            }
+            else
+            {
+                HandleUtility.AddDefaultControl(0);
+            }
+        }
+
+        lastHitObj = currentHitObj;
+    }
 
     private void CreateModule()
     {
@@ -262,6 +263,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             {
                 ModifyHintModule(objName, childObj);
             }
+            buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
         }
     }
 
