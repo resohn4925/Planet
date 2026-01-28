@@ -118,10 +118,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
             // 获取鼠标悬停的对象，优先选择modifiedhintmesh
             RaycastHit[] hits = Physics.RaycastAll(ray);
+            
+            // 按距离排序，近的在前
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            
+            // 优先选择modifiedhintmesh（名称以"Hint_"开头且包含"_modified"的对象）
             foreach (RaycastHit hit in hits)
             {
                 GameObject hitObj = hit.collider.gameObject;
-                // 优先选择modifiedhintmesh（名称以"Hint_"开头且包含"_modified"的对象）
                 if (hitObj.name.StartsWith("Hint_") && hitObj.name.Contains("_modified"))
                 {
                     currentHitObj = hitObj;
@@ -144,14 +148,10 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 }
             }
 
-            // 如果没有找到hintmesh，再使用普通的Raycast
-            if (currentHitObj == null)
+            // 如果没有找到hintmesh，选择第一个命中的对象
+            if (currentHitObj == null && hits.Length > 0)
             {
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit))
-                {
-                    currentHitObj = hit.collider.gameObject;
-                }
+                currentHitObj = hits[0].collider.gameObject;
             }
 
             // 处理命中对象
