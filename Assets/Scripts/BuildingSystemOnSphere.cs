@@ -131,13 +131,11 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 }
             }
             
-            // 如果没有找到modifiedhintmesh，再尝试找到普通的hintmesh
             if (currentHitObj == null)
             {
                 foreach (RaycastHit hit in hits)
                 {
                     GameObject hitObj = hit.collider.gameObject;
-                    // 选择普通的hintmesh（名称以"Hint_"开头的对象）
                     if (hitObj.name.StartsWith("Hint_"))
                     {
                         currentHitObj = hitObj;
@@ -180,8 +178,10 @@ public class BuildingSystemOnSphere : MonoBehaviour
                         buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
                     }
 
-                    CreateModule();
-                    e.Use();
+                //这里用全量更新会产生严重性能开销
+                //CreateModule();
+                IncrementalCreateModule();
+                e.Use();
                 }
             }
 
@@ -206,10 +206,11 @@ public class BuildingSystemOnSphere : MonoBehaviour
             lastHitObj = currentHitObj;
         }
 
+    /// <summary>
+    /// 全量更新
+    /// </summary>
     private void CreateModule()
     {
-        buildingSystemBase.UpdateModule(marchingCube);
-
         //pipeline中更新变形模块
         var pipelines = FindObjectsOfType<PlanetPipeline>();
         var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
@@ -223,6 +224,25 @@ public class BuildingSystemOnSphere : MonoBehaviour
         UpdateHint();
         ClearAllModifiedHints();
         ModifyAllHintModules();
+    }
+
+    /// <summary>
+    /// 增量更新
+    /// </summary>
+    private void IncrementalCreateModule()
+    {
+        //pipeline中更新变形模块
+        var pipelines = FindObjectsOfType<PlanetPipeline>();
+        var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
+        if (targetPipeline == null)
+        {
+            Debug.LogError("找不到planetpipeline,请先创建");
+        }
+        else { targetPipeline.GenerateObj(); }
+
+        //UpdateHint();
+        //ClearAllModifiedHints();
+        //ModifyAllHintModules();
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -259,6 +279,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
         // 隐藏modiefiedhint的mesh
         buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
+
+    }
+
+    /// <summary>
+    /// 增量更新hint
+    /// </summary>
+    public void ModifyHintModulesIncremental()
+    {
 
     }
 
@@ -357,8 +385,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         Matrix4x4 worldMatrix = hintObj.transform.localToWorldMatrix;
         modifyMesh3D.GenerateModule(modifyPointPos, hintObj, modifiedHintRoot, height, worldMatrix);
-
-        Debug.Log("激活");
     }
 
     /// <summary>
@@ -406,7 +432,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             face = faceTemp;
             xIndex = xIndexTemp; yIndex = yIndexTemp; zIndex = zIndexTemp;
 
-            Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
+            //Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
         }
 
         catch (Exception ex)
@@ -424,7 +450,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 if (objPointData.pos == pos)
                 {
                     string hintNameOverlap = $"Hint_{marchingCubeData.cubeFace}_{objPointData.xIndex}_{objPointData.zIndex}_{yIndex}_modified";
-                    Debug.Log($"{hintName}的重合点是{hintNameOverlap}");
+                    //Debug.Log($"{hintName}的重合点是{hintNameOverlap}");
                     GameObject currentHintObj = GameObject.Find(hintNameOverlap);
                     if (currentHintObj == null)
                     {

@@ -31,12 +31,12 @@ public class PlanetPipelineEditor : Editor
         //    planetPipeline.ActivateObj();
         //}
 
-        //if (GUILayout.Button("生成物件"))
-        //{
-        //    planetPipeline.GenerateObj();
-        //}
+        if (GUILayout.Button("生成物件"))
+        {
+            planetPipeline.GenerateObj();
+        }
 
-         bool isEditing = planetPipeline.isEditing;
+        bool isEditing = planetPipeline.isEditing;
         string buttonText = isEditing ? "结束编辑" : "开始编辑";
 
         if (planetPipeline.buildingSystemOnSphere != null)
