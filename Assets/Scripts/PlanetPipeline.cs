@@ -1,5 +1,6 @@
 using Enum;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Utility;
 using static UnityEngine.Mesh;
@@ -40,11 +41,13 @@ namespace Planet
         [HideInInspector] public bool isEditing;
 
         private List<Vector3> modifyPointPos = new();
-        private List<MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
+        private List<global::MarchingCube.MarchingCubeData.ModifyPointData> modifyPointDatas = new();
         private List<Vector3> modifyModulePos = new();
-        private List<MarchingCube.MarchingCubeData.ModifyModuleData> modifyModuleDatas = new();
+        private List<global::MarchingCube.MarchingCubeData.ModifyModuleData> modifyModuleDatas = new();
+        private List<List<global::MarchingCube.MarchingCubeData.ModifyModuleData>> preModifyModuleDatas = new();//上一次的moduledata
         private GameObject modifiedRoot;
         private GameObject root;
+        private List<List<global::MarchingCube.MarchingCubeData.ModulePointData>> _previousModulePointDatas = new();
 
         #region 初始化
         public void Init()
@@ -71,7 +74,7 @@ namespace Planet
             InitMarchingData();
 
             CreateRoot();
-            CreateModifiedRoot();
+            CreateModifiedRoot(true);
 
             SetAllModifyPointDatas();
             SetAllObjPointDatas();
@@ -118,16 +121,21 @@ namespace Planet
             marchingCube.moduleCollection = root;
         }
 
-        public void CreateModifiedRoot()
+        public void CreateModifiedRoot(bool isClear)
         {
             modifiedRoot = GameObject.Find("ModifiedRoot");
             if (modifiedRoot != null)
             {
-                DestroyImmediate(modifiedRoot);
+                if (isClear)
+                {
+                    DestroyImmediate(modifiedRoot);
+                    modifiedRoot = new GameObject("ModifiedRoot");
+                }
             }
-            modifiedRoot = new GameObject("ModifiedRoot");
-
-            Debug.Log("创建 ModifiedRoot 节点");
+            else
+            {
+                modifiedRoot = new GameObject("ModifiedRoot");
+            }
         }
 
         public void SetAllModifyPointDatas()
@@ -478,10 +486,46 @@ namespace Planet
 
         public void Load()
         {
-            //如果还在建造模式，先退出
+            // 如果还在建造模式，先退出
             buildingSystemOnSphere.SwitchEditMode(false);
 
             marchingCube.LoadTerrainData();
+
+            // 清空并重新初始化历史数据结构
+            _previousModulePointDatas.Clear();
+            preModifyModuleDatas.Clear();
+
+            foreach (var data in marchingCube.marchingCubeDatas)
+            {
+                // 记录modifyModuleDatas
+                List<global::MarchingCube.MarchingCubeData.ModifyModuleData> moduleDataCopy = new();
+                foreach (var moduleData in data.modifyModuleDatas)
+                {
+                    global::MarchingCube.MarchingCubeData.ModifyModuleData copy = new();
+                    copy.xIndex = moduleData.xIndex;
+                    copy.yIndex = moduleData.yIndex;
+                    copy.zIndex = moduleData.zIndex;
+                    copy.pos = moduleData.pos;
+                    copy.normal = moduleData.normal;
+                    moduleDataCopy.Add(copy);
+                }
+                preModifyModuleDatas.Add(moduleDataCopy);
+
+                // 记录modulePointDatas用于比对
+                List<global::MarchingCube.MarchingCubeData.ModulePointData> pointDataCopy = new();
+                foreach (var pointData in data.modulePointDatas)
+                {
+                    global::MarchingCube.MarchingCubeData.ModulePointData copy = new();
+                    copy.xIndex = pointData.xIndex;
+                    copy.yIndex = pointData.yIndex;
+                    copy.zIndex = pointData.zIndex;
+                    copy.pos = pointData.pos;
+                    copy.moduleName = pointData.moduleName;
+                    pointDataCopy.Add(copy);
+                }
+                _previousModulePointDatas.Add(pointDataCopy);
+            }
+
             GenerateObj();
         }
 
@@ -492,12 +536,12 @@ namespace Planet
 
         #region 模块生成
         /// <summary>
-        /// 生成测试模块
+        /// 全量更新
         /// </summary>
         public void GenerateObj()
         {
             CreateRoot();
-            CreateModifiedRoot();
+            CreateModifiedRoot(true);
             ClearAllModules();
             ModifyAllModules();
         }
@@ -647,6 +691,10 @@ namespace Planet
             }
         }
 
+        /// <summary>
+        /// 全量更新modifiedmodule
+        /// </summary>
+        /// <param name="marchingCubeData"></param>
         public void ModifyModule(MarchingCube.MarchingCubeData marchingCubeData)
         {
             List<Vector3> modifyPointPos = new();
@@ -734,11 +782,6 @@ namespace Planet
                     }
                 }
             }
-        }
-
-        public void ModifyHintModule(MarchingCube.MarchingCubeData marchingCubeData)
-        {
-
         }
         #endregion
 

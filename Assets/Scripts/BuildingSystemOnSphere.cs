@@ -24,6 +24,11 @@ public class BuildingSystemOnSphere : MonoBehaviour
     private Vector3 lastClickPosition;
 
     private RippleEffectURP rippleEffect;
+    // 存储上一次的hint激活状态，用于增量更新
+    private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
+
+    //测试用变量
+    //public GameObject testHintObj;
 
 
     public void Init(MarchingCube marchingCube)
@@ -85,14 +90,65 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
     public void UpdateHint()
     {
-        //计算上一次更新时哪些点被激活
-
-
         buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
         marchingCube.UpdateHint(marchingCube);
-        // 隐藏原始 hint 物件的渲染器，只显示 modifiedhint
+        // 隐藏hint的mesh
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
         ModifyAllHintModules();
+    }
+
+    public void UpdateHintIncremental()
+    {
+        buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
+        
+        //计算changedhint索引
+        List<string> newActiveHints = new List<string>();
+        Dictionary<string, bool> currentHintStates = new Dictionary<string, bool>();
+        
+        foreach (var data in marchingCube.marchingCubeDatas)
+        {
+            var hintArray = data.hintObjPointArray;
+            if (hintArray == null)
+                continue;
+            
+            int xSize = hintArray.GetLength(0);
+            int zSize = hintArray.GetLength(1);
+            int ySize = hintArray.GetLength(2);
+            
+            for (int x = 0; x < xSize; x++)
+            {
+                for (int z = 0; z < zSize; z++)
+                {
+                    for (int y = 0; y < ySize; y++)
+                    {
+                        string hintKey = $"{data.cubeFace}_{x}_{z}_{y}";
+                        bool isActive = hintArray[x, z, y].isActive;
+                        currentHintStates[hintKey] = isActive;
+                        
+                        if (isActive && (!_previousHintStates.ContainsKey(hintKey) || !_previousHintStates[hintKey]))
+                        {
+                            newActiveHints.Add(hintKey);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (newActiveHints.Count > 0)
+        {
+            foreach (string hintKey in newActiveHints)
+            {
+                Debug.Log($"changedhint索引为{hintKey}");
+            }
+        }
+        
+        _previousHintStates = currentHintStates;
+
+        marchingCube.UpdateHint(marchingCube);
+        // 隐藏hint的mesh
+        buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+        // 增量更新hint
+        ModifyHintModulesIncremental(newActiveHints);
     }
 
     private void OnSceneGUI(SceneView sceneView)
@@ -117,7 +173,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
             Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
             GameObject currentHitObj = null;
 
-
         // 获取鼠标悬停的对象，优先选择modifiedhintmesh
         RaycastHit[] hits = Physics.RaycastAll(ray);
 
@@ -139,16 +194,15 @@ public class BuildingSystemOnSphere : MonoBehaviour
         if (currentHitObj == null)
         {
             foreach (RaycastHit hit in hits)
-            {
-                GameObject hitObj = hit.collider.gameObject;
-                // 选择普通的hintmesh（名称以"Hint_"开头的对象）
-                if (hitObj.name.StartsWith("Hint_"))
                 {
-                    currentHitObj = hitObj;
-                    break;
+                    GameObject hitObj = hit.collider.gameObject;
+                    if (hitObj.name.StartsWith("Hint_"))
+                    {
+                        currentHitObj = hitObj;
+                        break;
+                    }
                 }
             }
-        }
 
         // 如果没有找到hintmesh，选择第一个命中的对象
         if (currentHitObj == null && hits.Length > 0)
@@ -165,55 +219,58 @@ public class BuildingSystemOnSphere : MonoBehaviour
             // 检查是否是原始 hint 物件，如果是则不显示
             if (!currentHitObj.name.StartsWith("Hint_"))
             {
-                buildingSystemBase.UpdateHintMesh(currentHitObj, true);
-            }
-            //根据名字计算currentobj的face,x,y,z索引
-            //SetOverlapPoint逻辑计算该物件的overlap物件索引
-            //激活overlap物件
-            SetOverlapPoint(currentHitObj.name);
-
-            if (e.type == EventType.MouseDown && e.button == 0)
-            {
-                //获取currentHitObj的索引，根据索引激活基础obj
-                if (currentBuildingMode == BuildingMode.Build)
-                {
-                    buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                    buildingSystemBase.UpdateHintMesh(currentHitObj, true);
                 }
-                else if (currentBuildingMode == BuildingMode.Destroy)
-                {
-                    buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
-                }
+                //根据名字计算currentobj的face,x,y,z索引
+                //SetOverlapPoint逻辑计算该物件的overlap物件索引
+                //激活overlap物件
+                SetOverlapPoint(currentHitObj.name);
 
-                CreateModule();
+                if (e.type == EventType.MouseDown && e.button == 0)
+                {
+                    //获取currentHitObj的索引，根据索引激活基础obj
+                    if (currentBuildingMode == BuildingMode.Build)
+                    {
+                        buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                    }
+                    else if (currentBuildingMode == BuildingMode.Destroy)
+                    {
+                        buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
+                    }
+
+                //这里用全量更新会产生严重性能开销
+                //CreateModule();
+                IncrementalCreateModule();
                 e.Use();
+                }
             }
-        }
 
-        // 检测鼠标移出事件
-        if (lastHitObj != null && (currentHitObj == null || currentHitObj != lastHitObj))
-        {
-            OnMouseExitHitObj(lastHitObj);
-        }
-
-        if (e.type == EventType.Layout || e.type == EventType.Repaint)
-        {
-            if (needTakeControl)
+            // 检测鼠标移出事件
+            if (lastHitObj != null && (currentHitObj == null || currentHitObj != lastHitObj))
             {
-                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+                OnMouseExitHitObj(lastHitObj);
             }
-            else
+
+            if (e.type == EventType.Layout || e.type == EventType.Repaint)
             {
-                HandleUtility.AddDefaultControl(0);
+                if (needTakeControl)
+                {
+                    HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+                }
+                else
+                {
+                    HandleUtility.AddDefaultControl(0);
+                }
             }
+
+            lastHitObj = currentHitObj;
         }
 
-        lastHitObj = currentHitObj;
-    }
-
+    /// <summary>
+    /// 全量更新
+    /// </summary>
     private void CreateModule()
     {
-        buildingSystemBase.UpdateModule(marchingCube);
-
         //pipeline中更新变形模块
         var pipelines = FindObjectsOfType<PlanetPipeline>();
         var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
@@ -227,6 +284,29 @@ public class BuildingSystemOnSphere : MonoBehaviour
         UpdateHint();
         ClearAllModifiedHints();
         ModifyAllHintModules();
+
+        // 触发波纹效果
+        TriggerRippleEffect();
+    }
+
+    /// <summary>
+    /// 增量更新
+    /// </summary>
+    private void IncrementalCreateModule()
+    {
+        //pipeline中更新变形模块
+        var pipelines = FindObjectsOfType<PlanetPipeline>();
+        var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
+        if (targetPipeline == null)
+        {
+            Debug.LogError("找不到planetpipeline,请先创建");
+        }
+        else { targetPipeline.GenerateObj(); }
+
+        UpdateHintIncremental();
+        //UpdateHint();
+        //ClearAllModifiedHints();
+        //ModifyAllHintModules();
 
         // 触发波纹效果
         TriggerRippleEffect();
@@ -263,8 +343,25 @@ public class BuildingSystemOnSphere : MonoBehaviour
             {
                 ModifyHintModule(objName, childObj);
             }
-            buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
         }
+        // 隐藏modiefiedhint的mesh
+        buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
+    }
+
+    /// <summary>
+    /// 增量更新hint
+    /// </summary>
+    public void ModifyHintModulesIncremental(List<string> hintkey)
+    {
+        GameObject hintRoot = GameObject.Find("HintRoot");
+        if (hintRoot == null)
+        {
+            Debug.LogError("未找到HintRoot节点！");
+            return;
+        }
+
+
+        //隐藏增量更新的hint的mesh
     }
 
     public void ClearAllModifiedHints()
@@ -362,8 +459,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         Matrix4x4 worldMatrix = hintObj.transform.localToWorldMatrix;
         modifyMesh3D.GenerateModule(modifyPointPos, hintObj, modifiedHintRoot, height, worldMatrix);
-
-        Debug.Log("激活");
     }
 
     /// <summary>
@@ -411,7 +506,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             face = faceTemp;
             xIndex = xIndexTemp; yIndex = yIndexTemp; zIndex = zIndexTemp;
 
-            Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
+            //Debug.Log($"hintobj索引为{face},[{xIndex}, {zIndex}, {yIndex}]");
         }
 
         catch (Exception ex)
@@ -429,7 +524,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 if (objPointData.pos == pos)
                 {
                     string hintNameOverlap = $"Hint_{marchingCubeData.cubeFace}_{objPointData.xIndex}_{objPointData.zIndex}_{yIndex}_modified";
-                    Debug.Log($"{hintName}的重合点是{hintNameOverlap}");
+                    //Debug.Log($"{hintName}的重合点是{hintNameOverlap}");
                     GameObject currentHintObj = GameObject.Find(hintNameOverlap);
                     if (currentHintObj == null)
                     {
@@ -457,6 +552,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             UpdateHint();
         }
     }
+
 
     private void TriggerRippleEffect()
     {

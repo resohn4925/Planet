@@ -153,6 +153,10 @@ public class RippleEffectURP : MonoBehaviour
         droplet = new Droplet();
         droplet.Reset();
 
+        // 重置激活状态，避免自动触发波纹
+        activation = false;
+        timer = 0f;
+
         // 创建梯度纹理
         gradTexture = new Texture2D(2048, 1, TextureFormat.RGBA32, false);
         gradTexture.wrapMode = TextureWrapMode.Clamp;

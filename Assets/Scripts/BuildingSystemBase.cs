@@ -146,6 +146,7 @@ public class BuildingSystemBase : MonoBehaviour
             }
         }
     }
+ 
 
     public void ResetHint(MarchingCube marchingCube)
     {
@@ -285,7 +286,11 @@ public class BuildingSystemBase : MonoBehaviour
 
     public void UpdateModule(MarchingCube marchingCube)
     {
-        marchingCube.UpdateModules(marchingCube.marchingCubeDatas[0]);
+        foreach(var data in marchingCube.marchingCubeDatas)
+        {
+            marchingCube.UpdateModules(data);
+        }
+
     }
     #endregion
 }
