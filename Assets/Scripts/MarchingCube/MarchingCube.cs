@@ -417,6 +417,11 @@ public class MarchingCube : MonoBehaviour
         }
     }
 
+    public void UpdateHintIncremental(MarchingCube marchingCube)
+    {
+        
+    }
+
     public void ClearFaceHintInstances(MarchingCubeData marchingCubeData)
     {
         if (marchingCubeData.faceHintInstances == null) return;

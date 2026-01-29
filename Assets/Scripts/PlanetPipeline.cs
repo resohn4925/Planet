@@ -538,19 +538,9 @@ namespace Planet
         public void GenerateObj()
         {
             CreateRoot();
-            CreateModifiedRoot(false);
+            CreateModifiedRoot(true);
             ClearAllModules();
             ModifyAllModules();
-        }
-
-        public void GenerateObjIncremental()
-        {
-            CreateRoot();
-            CreateModifiedRoot(false);
-            foreach (var data in marchingCube.marchingCubeDatas)
-            {
-                ModifyModuleIncremental(data);
-            }
         }
 
         public void ActivateObj()
@@ -687,15 +677,6 @@ namespace Planet
                 }
             }
 
-            // 清除modifiedRoot中的所有子对象（包括灯光）
-            if (modifiedRoot != null)
-            {
-                for (int i = modifiedRoot.transform.childCount - 1; i >= 0; i--)
-                {
-                    DestroyImmediate(modifiedRoot.transform.GetChild(i).gameObject);
-                }
-            }
-
             modifyMesh3D.ClearAllModules();
         }
 
@@ -798,23 +779,6 @@ namespace Planet
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// 增量更新modifiedmodule
-        /// </summary>
-        /// <param name="marchingCubeData"></param>
-        public void ModifyModuleIncremental(global::MarchingCube.MarchingCubeData marchingCubeData)
-        {
-            for (int i = 0; i < marchingCubeData.modulePointDatas.Count; i++)
-            {
-                global::MarchingCube.MarchingCubeData.ModulePointData modulePointData = marchingCubeData.modulePointDatas[i];
-                
-                if (modulePointData.moduleName == "00000000")
-                    continue;
-            }
-            
-            // 更新历史数据
         }
         #endregion
 

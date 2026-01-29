@@ -21,6 +21,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
     private bool isEditing = false;
     private GameObject lastHitObj = null;
     private float _hintModifyHeight = 3.636364f;
+    
+    // 存储上一次的hint激活状态，用于增量更新
+    private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
 
     //测试用变量
     //public GameObject testHintObj;
@@ -90,6 +93,60 @@ public class BuildingSystemOnSphere : MonoBehaviour
         // 隐藏hint的mesh
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
         ModifyAllHintModules();
+    }
+
+    public void UpdateHintIncremental()
+    {
+        buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
+        
+        //计算changedhint索引
+        List<string> newActiveHints = new List<string>();
+        Dictionary<string, bool> currentHintStates = new Dictionary<string, bool>();
+        
+        foreach (var data in marchingCube.marchingCubeDatas)
+        {
+            var hintArray = data.hintObjPointArray;
+            if (hintArray == null)
+                continue;
+            
+            int xSize = hintArray.GetLength(0);
+            int zSize = hintArray.GetLength(1);
+            int ySize = hintArray.GetLength(2);
+            
+            for (int x = 0; x < xSize; x++)
+            {
+                for (int z = 0; z < zSize; z++)
+                {
+                    for (int y = 0; y < ySize; y++)
+                    {
+                        string hintKey = $"{data.cubeFace}_{x}_{z}_{y}";
+                        bool isActive = hintArray[x, z, y].isActive;
+                        currentHintStates[hintKey] = isActive;
+                        
+                        if (isActive && (!_previousHintStates.ContainsKey(hintKey) || !_previousHintStates[hintKey]))
+                        {
+                            newActiveHints.Add(hintKey);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (newActiveHints.Count > 0)
+        {
+            foreach (string hintKey in newActiveHints)
+            {
+                Debug.Log($"changedhint索引为{hintKey}");
+            }
+        }
+        
+        _previousHintStates = currentHintStates;
+
+        marchingCube.UpdateHint(marchingCube);
+        // 隐藏hint的mesh
+        buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+        // 增量更新hint
+        ModifyHintModulesIncremental();
     }
 
     private void OnSceneGUI(SceneView sceneView)
@@ -240,6 +297,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
         else { targetPipeline.GenerateObj(); }
 
+        UpdateHintIncremental();
         //UpdateHint();
         //ClearAllModifiedHints();
         //ModifyAllHintModules();
@@ -279,7 +337,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
         // 隐藏modiefiedhint的mesh
         buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
-
     }
 
     /// <summary>
@@ -287,7 +344,15 @@ public class BuildingSystemOnSphere : MonoBehaviour
     /// </summary>
     public void ModifyHintModulesIncremental()
     {
+        GameObject hintRoot = GameObject.Find("HintRoot");
+        if (hintRoot == null)
+        {
+            Debug.LogError("未找到HintRoot节点！");
+            return;
+        }
 
+
+        //隐藏增量更新的hint的mesh
     }
 
     public void ClearAllModifiedHints()
