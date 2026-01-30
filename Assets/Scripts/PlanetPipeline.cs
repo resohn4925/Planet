@@ -546,6 +546,16 @@ namespace Planet
             ModifyAllModules();
         }
 
+        /// <summary>
+        /// 增量更新
+        /// </summary>
+        public void GenerateObjIncremental()
+        {
+            CreateRoot();
+            CreateModifiedRoot(true);
+            ModifyAllModules();
+        }
+
         public void ActivateObj()
         {
             //测试逻辑

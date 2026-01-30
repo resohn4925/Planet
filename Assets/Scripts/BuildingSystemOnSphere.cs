@@ -121,7 +121,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 {
                     for (int y = 0; y < ySize; y++)
                     {
-                        string hintKey = $"{data.cubeFace}_{x}_{z}_{y}";
+                        string hintKey = $"Hint_{data.cubeFace}_{x}_{z}_{y}";
                         bool isActive = hintArray[x, z, y].isActive;
                         currentHintStates[hintKey] = isActive;
                         
@@ -301,12 +301,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
         {
             Debug.LogError("找不到planetpipeline,请先创建");
         }
-        else { targetPipeline.GenerateObj(); }
+        else { targetPipeline.GenerateObjIncremental(); }
 
         UpdateHintIncremental();
-        //UpdateHint();
-        //ClearAllModifiedHints();
-        //ModifyAllHintModules();
 
         // 触发波纹效果
         TriggerRippleEffect();
@@ -360,8 +357,16 @@ public class BuildingSystemOnSphere : MonoBehaviour
             return;
         }
 
+        foreach (var hint in hintkey)
+        {
+            GameObject hintObj = GameObject.Find(hint);
+            ModifyHintModule(hint, hintObj);
 
-        //隐藏增量更新的hint的mesh
+            GameObject hintRootModified = GameObject.Find(hint + "_modified");
+
+            //隐藏增量更新的hint的mesh
+            buildingSystemBase.UpdateHintMesh(hintRootModified, false);
+        }
     }
 
     public void ClearAllModifiedHints()
