@@ -73,8 +73,9 @@ namespace Planet
             GenerateMesh();
             InitMarchingData();
 
-            CreateRoot();
-            CreateModifiedRoot(true);
+            CreateInvalidRoot("Root");
+            CreateRoot("ModifiedRoot", true);
+            //CreateRoot("HintRoot", true); 
 
             SetAllModifyPointDatas();
             SetAllObjPointDatas();
@@ -92,14 +93,13 @@ namespace Planet
             marchingCube.InitAllMarchingCubeDatas(6);
         }
 
-        public void CreateRoot()
+        public void CreateInvalidRoot(string rootName)
         {
-            // 查找所有名为 "Root" 的节点，包括隐藏的
             GameObject[] rootObjects = Resources.FindObjectsOfTypeAll<GameObject>();
             root = null;
             foreach (GameObject obj in rootObjects)
             {
-                if (obj.name == "Root" && obj.scene.IsValid()) // 确保是场景中的对象，不是预制体
+                if (obj.name == "Root" && obj.scene.IsValid())
                 {
                     root = obj;
                     break;
@@ -109,32 +109,28 @@ namespace Planet
             if (root == null)
             {
                 root = new GameObject("Root");
-                // 创建后立即将 Root 节点设置为不可见，这样它的子物件也会不可见
                 root.SetActive(false);
-                Debug.Log("创建 Root 节点并设置为不可见");
             }
             else
             {
-                // 复用已存在的 Root 节点
-                Debug.Log("复用已存在的 Root 节点");
             }
             marchingCube.moduleCollection = root;
         }
 
-        public void CreateModifiedRoot(bool isClear)
+        public void CreateRoot(string rootName, bool isClear)
         {
-            modifiedRoot = GameObject.Find("ModifiedRoot");
+            modifiedRoot = GameObject.Find(rootName);
             if (modifiedRoot != null)
             {
                 if (isClear)
                 {
                     DestroyImmediate(modifiedRoot);
-                    modifiedRoot = new GameObject("ModifiedRoot");
+                    modifiedRoot = new GameObject(rootName);
                 }
             }
             else
             {
-                modifiedRoot = new GameObject("ModifiedRoot");
+                modifiedRoot = new GameObject(rootName);
             }
         }
 
@@ -540,8 +536,8 @@ namespace Planet
         /// </summary>
         public void GenerateObj()
         {
-            CreateRoot();
-            CreateModifiedRoot(true);
+            CreateInvalidRoot("Root");
+            CreateRoot("ModifiedRoot", true);
             ClearAllModules();
             ModifyAllModules();
         }
@@ -551,8 +547,8 @@ namespace Planet
         /// </summary>
         public void GenerateObjIncremental()
         {
-            CreateRoot();
-            CreateModifiedRoot(true);
+            CreateInvalidRoot("Root");
+            CreateRoot("ModifiedRoot", true);
             ModifyAllModules();
         }
 

@@ -73,6 +73,8 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         //表现层,展示所有可建造的地块
         UpdateHint();
+        //首次增量更新，防止阻塞
+        UpdateHintIncremental();
     }
 
     private void StopEditing()
@@ -94,6 +96,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
         marchingCube.UpdateHint(marchingCube);
         // 隐藏hint的mesh
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+
         ModifyAllHintModules();
     }
 
@@ -216,7 +219,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
             buildingSystemBase.GenerateHittedObj(currentHitObj);
 
             buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
-            // 检查是否是原始 hint 物件，如果是则不显示
             if (!currentHitObj.name.StartsWith("Hint_"))
             {
                     buildingSystemBase.UpdateHintMesh(currentHitObj, true);
@@ -228,19 +230,31 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
                 if (e.type == EventType.MouseDown && e.button == 0)
                 {
-                    //获取currentHitObj的索引，根据索引激活基础obj
+                    // 设置点击位置为波纹效果的位置
+                    RaycastHit[] clickHits = Physics.RaycastAll(ray);
+                    if (clickHits.Length > 0)
+                    {
+                        lastClickPosition = clickHits[0].point;
+                    }
+                    else
+                    {
+                        lastClickPosition = ray.origin + ray.direction * 10f;
+                    }
+                    
                     if (currentBuildingMode == BuildingMode.Build)
                     {
                         buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                        //这里用全量更新会产生严重性能开销
+                        //CreateModule();
+                        IncrementalCreateModule();
                     }
                     else if (currentBuildingMode == BuildingMode.Destroy)
                     {
                         buildingSystemBase.DeactivateModule(currentHitObj.name, marchingCube);
+                        CreateModule(true);
                     }
 
-                //这里用全量更新会产生严重性能开销
-                //CreateModule();
-                IncrementalCreateModule();
+
                 e.Use();
                 }
             }
@@ -269,7 +283,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
     /// <summary>
     /// 全量更新
     /// </summary>
-    private void CreateModule()
+    private void CreateModule(bool isEffect)
     {
         //pipeline中更新变形模块
         var pipelines = FindObjectsOfType<PlanetPipeline>();
@@ -286,7 +300,10 @@ public class BuildingSystemOnSphere : MonoBehaviour
         ModifyAllHintModules();
 
         // 触发波纹效果
-        TriggerRippleEffect();
+        if (isEffect)
+        {
+            TriggerRippleEffect();
+        }
     }
 
     /// <summary>
@@ -555,9 +572,13 @@ public class BuildingSystemOnSphere : MonoBehaviour
         if (isEditing)
         {
             UpdateHint();
+            //CreateModule();
+            if (currentBuildingMode == BuildingMode.Destroy)
+            {
+                CreateModule(false);
+            }
         }
     }
-
 
     private void TriggerRippleEffect()
     {
