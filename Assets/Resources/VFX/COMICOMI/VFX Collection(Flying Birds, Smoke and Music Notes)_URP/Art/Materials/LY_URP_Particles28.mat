@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: LY_URP_Particles28
+  m_Shader: {fileID: 4800000, guid: 2c07c7ed466ffb741a574c87fd195430, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainxTex:
+        m_Texture: {fileID: 2800000, guid: 445f3c753df3fb04f8afc73f992805ce, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _CullMode: 0
+    - _FinalOpacity: 1
+    - _Int: 1
+    - _MaskInt: 1
+    - _MaskOffset: 0.5
+    - _Maskwidth: 1.5
+    - _StencilComp: 0
+    - _StencilRef: 1
+    - _USetOrVSetMask: 0
+    - _WrapInt: 0.1
+    - _WrapOrNot: 0
+    - _ZTestMode: 4
+    - _blinkSpeed: 0
+    - _minEmission: 1
+    m_Colors:
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 0}
+    - _moveSpeed: {r: 0, g: 0, b: 0, a: 0}

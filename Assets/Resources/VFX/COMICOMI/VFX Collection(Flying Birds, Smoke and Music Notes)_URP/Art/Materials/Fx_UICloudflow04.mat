@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Fx_UICloudflow04
+  m_Shader: {fileID: 4800000, guid: 2c07c7ed466ffb741a574c87fd195430, type: 3}
+  m_ShaderKeywords: _USETORVSETMASK_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainxTex:
+        m_Texture: {fileID: 2800000, guid: b648568754ffb874998f0cf9890ddf70, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0.23, y: 0}
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _CullMode: 0
+    - _FinalOpacity: 1
+    - _Int: 1
+    - _MaskInt: 0
+    - _MaskOffset: 1.38
+    - _Maskwidth: 1
+    - _StencilComp: 0
+    - _StencilRef: 255
+    - _USetOrVSetMask: 1
+    - _WrapInt: 0.01
+    - _WrapOrNot: 0
+    - _ZTestMode: 4
+    - _blinkSpeed: 0.5
+    - _minEmission: 1
+    m_Colors:
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 0}
+    - _moveSpeed: {r: -0.003, g: 0, b: 0, a: 0}
