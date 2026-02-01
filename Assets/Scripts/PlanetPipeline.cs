@@ -791,11 +791,32 @@ namespace Planet
         }
         #endregion
 
+        private bool isVFXActive = false;
+
         public void ShowDebug()
         {
-            //meshGenerator.ShowDebug();
-            //buildingSystemOnSphere.ModifyHintModule();
-            buildingSystemOnSphere.ModifyAllHintModules();
+            //Vector3 position = new Vector3(50, 50, 50);
+            //Quaternion rotation = Quaternion.Euler(0, 90, 0);
+            //Vector3 direction = rotation * Vector3.forward;
+            
+            //int faceIndex = 0;
+            //int x = 0;
+            //int y = 0;
+            //int z = 0;
+            
+            //if (vfxGenerator != null)
+            //{
+            //    if (isVFXActive)
+            //    {
+            //        vfxGenerator.DestroyVFXByIndex(faceIndex, x, y, z);
+            //    }
+            //    else
+            //    {
+            //        vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, y, z);
+            //    }
+                
+            //    isVFXActive = !isVFXActive;
+            //}
         }
 
         public void SwitchGeometry()
@@ -805,12 +826,6 @@ namespace Planet
 
         private void OnDrawGizmos()
         {
-            //Gizmos.color = Color.white;
-            //foreach (Vector3 indexVec in meshGenerator.meshDataList[0].vertices)
-            //{
-
-            //    Gizmos.DrawSphere(indexVec, 0.25f);
-            //}
         }
     }
 }

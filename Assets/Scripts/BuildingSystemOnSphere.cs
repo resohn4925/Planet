@@ -1,4 +1,4 @@
-﻿using Planet;
+using Planet;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using UnityEngine;
 public class BuildingSystemOnSphere : MonoBehaviour
 {
     public BuildingSystemBase buildingSystemBase;
+    public VFXGenerator vfxGenerator;
     [HideInInspector] public MarchingCube marchingCube;
     public ModifyMesh3d modifyMesh3D;
 
@@ -27,9 +28,10 @@ public class BuildingSystemOnSphere : MonoBehaviour
     // 存储上一次的hint激活状态，用于增量更新
     private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
 
+    private Dictionary<string, bool> previousBirdEffectStates = new Dictionary<string, bool>();
+
     //测试用变量
     //public GameObject testHintObj;
-
 
     public void Init(MarchingCube marchingCube)
     {
@@ -74,7 +76,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
         //表现层,展示所有可建造的地块
         UpdateHint();
         //首次增量更新，防止阻塞
-        UpdateHintIncremental();
+        UpdateHintIncremental(GetIncrementIndex());
     }
 
     private void StopEditing()
@@ -100,24 +102,26 @@ public class BuildingSystemOnSphere : MonoBehaviour
         ModifyAllHintModules();
     }
 
-    public void UpdateHintIncremental()
+    /// <summary>
+    /// 获取增量更新索引
+    /// </summary>
+    public List<string> GetIncrementIndex()
     {
         buildingSystemBase.CalculateHint(marchingCube, currentBuildingMode);
-        
-        //计算changedhint索引
+
         List<string> newActiveHints = new List<string>();
         Dictionary<string, bool> currentHintStates = new Dictionary<string, bool>();
-        
+
         foreach (var data in marchingCube.marchingCubeDatas)
         {
             var hintArray = data.hintObjPointArray;
             if (hintArray == null)
                 continue;
-            
+
             int xSize = hintArray.GetLength(0);
             int zSize = hintArray.GetLength(1);
             int ySize = hintArray.GetLength(2);
-            
+
             for (int x = 0; x < xSize; x++)
             {
                 for (int z = 0; z < zSize; z++)
@@ -127,7 +131,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                         string hintKey = $"Hint_{data.cubeFace}_{x}_{z}_{y}";
                         bool isActive = hintArray[x, z, y].isActive;
                         currentHintStates[hintKey] = isActive;
-                        
+
                         if (isActive && (!_previousHintStates.ContainsKey(hintKey) || !_previousHintStates[hintKey]))
                         {
                             newActiveHints.Add(hintKey);
@@ -136,7 +140,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 }
             }
         }
-        
+
         if (newActiveHints.Count > 0)
         {
             foreach (string hintKey in newActiveHints)
@@ -144,9 +148,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 Debug.Log($"changedhint索引为{hintKey}");
             }
         }
-        
+
         _previousHintStates = currentHintStates;
 
+        return newActiveHints;
+    }
+
+    public void UpdateHintIncremental(List<string> newActiveHints)
+    {
         marchingCube.UpdateHint(marchingCube);
         // 隐藏hint的mesh
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
@@ -155,34 +164,34 @@ public class BuildingSystemOnSphere : MonoBehaviour
     }
 
     private void OnSceneGUI(SceneView sceneView)
+    {
+        if (!isEditing)
+            return;
+
+        if (hintObj == null)
+            return;
+
+        Event e = Event.current;
+
+        bool needTakeControl = false;
+
+        if (e.type == EventType.Layout || e.type == EventType.Repaint)
         {
-            if (hintObj == null)
-                return;
+            HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+        }
+        if (e.alt)
+        {
+            HandleUtility.AddDefaultControl(0);
+            return;
+        }
 
-            Event e = Event.current;
+        Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+        GameObject currentHitObj = null;
 
-            bool needTakeControl = false;
-
-            if (e.type == EventType.Layout || e.type == EventType.Repaint)
-            {
-                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
-            }
-            if (e.alt)
-            {
-                HandleUtility.AddDefaultControl(0);
-                return;
-            }
-
-            Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-            GameObject currentHitObj = null;
-
-        // 获取鼠标悬停的对象，优先选择modifiedhintmesh
         RaycastHit[] hits = Physics.RaycastAll(ray);
 
-        // 按距离排序，近的在前
         Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-        // 优先选择modifiedhintmesh（名称以"Hint_"开头且包含"_modified"的对象）
         foreach (RaycastHit hit in hits)
         {
             GameObject hitObj = hit.collider.gameObject;
@@ -193,7 +202,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
             }
         }
 
-        // 如果没有找到modifiedhintmesh，再尝试找到普通的hintmesh
         if (currentHitObj == null)
         {
             foreach (RaycastHit hit in hits)
@@ -207,7 +215,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 }
             }
 
-        // 如果没有找到hintmesh，选择第一个命中的对象
         if (currentHitObj == null && hits.Length > 0)
         {
             currentHitObj = hits[0].collider.gameObject;
@@ -320,16 +327,16 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
         else { targetPipeline.GenerateObjIncremental(); }
 
-        UpdateHintIncremental();
+        UpdateHintIncremental(GetIncrementIndex());
 
         // 触发波纹效果
         TriggerRippleEffect();
+        // 触发飞鸟VFX
+        TriggerBirdEffect();
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
     {
-        //Debug.Log($"鼠标移出了对象: {exitedObj.name}");
-        //必须是"Hint_开头的物体"
         if (exitedObj != null && !string.IsNullOrEmpty(exitedObj.name) && exitedObj.name.StartsWith("Hint_"))
         {
             buildingSystemBase.UpdateHintMesh(exitedObj, false);
@@ -580,21 +587,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
     }
 
-    private void TriggerRippleEffect()
-    {
-        if (rippleEffect == null)
-        {
-            rippleEffect = FindObjectOfType<RippleEffectURP>();
-            if (rippleEffect == null)
-            {
-                Debug.LogWarning("未找到RippleEffectURP组件，无法触发波纹效果");
-                return;
-            }
-        }
-
-        rippleEffect.ActivateRipple(lastClickPosition);
-    }
-
     private Vector3 GetHitPoint(Ray ray, GameObject targetObj)
     {
         RaycastHit[] hits = Physics.RaycastAll(ray);
@@ -631,4 +623,138 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         return Vector3.zero;
     }
+
+    #region 特效相关
+
+    private void TriggerRippleEffect()
+    {
+        if (rippleEffect == null)
+        {
+            rippleEffect = FindObjectOfType<RippleEffectURP>();
+            if (rippleEffect == null)
+            {
+                Debug.LogWarning("未找到RippleEffectURP组件，无法触发波纹效果");
+                return;
+            }
+        }
+
+        rippleEffect.ActivateRipple(lastClickPosition);
+    }
+
+    private void TriggerBirdEffect()
+    {
+        return;
+        if (vfxGenerator == null)
+        {
+            vfxGenerator = FindObjectOfType<VFXGenerator>();
+            if (vfxGenerator == null)
+            {
+                Debug.LogWarning("未找到VFXGenerator组件，无法触发飞鸟效果");
+                return;
+            }
+        }
+
+        if (marchingCube == null || marchingCube.marchingCubeDatas == null)
+        {
+            Debug.LogWarning("marchingCube or marchingCubeDatas is null");
+            return;
+        }
+
+        List<string> newActiveBirds = new List<string>();
+        Dictionary<string, bool> currentBirdStates = new Dictionary<string, bool>();
+
+        foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
+        {
+            int faceIndex = (int)marchingCubeData.cubeFace;
+            int layers = marchingCubeData.layers;
+            int topLayerIndex = layers - 1;
+            int faceSize = marchingCubeData.rows; // Assuming rows = columns = faceSize
+
+            // Iterate through all points in objPointArray
+            int extendedRows = marchingCubeData.rows + 2;
+            int extendedColumns = marchingCubeData.columns + 2;
+
+            for (int x = 0; x < extendedRows; x++)
+            {
+                for (int z = 0; z < extendedColumns; z++)
+                {
+                    for (int y = 0; y < layers; y++)
+                    {
+                        var point = marchingCubeData.objPointArray[x, z, y];
+                        
+                        // Check if it's top layer
+                        if (y == topLayerIndex)
+                        {
+                            // Check if it's not a boundary point
+                            // For a face of size N, boundaries are x=0, x=N+1, z=0, z=N+1 (since array is extended)
+                            bool isBoundary = (x == 0 || x == faceSize + 1 || z == 0 || z == faceSize + 1);
+                            
+                            if (!isBoundary && point.isActive)
+                            {
+                                string birdKey = $"{faceIndex}_{x}_{z}_{y}";
+                                currentBirdStates[birdKey] = true;
+                                
+                                if (!previousBirdEffectStates.ContainsKey(birdKey) || !previousBirdEffectStates[birdKey])
+                                {
+                                    newActiveBirds.Add(birdKey);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle incremental changes
+        if (newActiveBirds.Count > 0)
+        {
+            foreach (string birdKey in newActiveBirds)
+            {
+                Debug.Log($"changedbird索引为{birdKey}");
+                // Parse the key to get indices
+                string[] parts = birdKey.Split('_');
+                if (parts.Length == 4)
+                {
+                    int faceIndex = int.Parse(parts[0]);
+                    int x = int.Parse(parts[1]);
+                    int z = int.Parse(parts[2]);
+                    int y = int.Parse(parts[3]);
+                    
+                    // Get the point position and direction
+                    var marchingCubeData = marchingCube.marchingCubeDatas[faceIndex];
+                    var point = marchingCubeData.objPointArray[x, z, y];
+                    Vector3 position = point.pos;
+                    Vector3 direction = Vector3.up; // Assuming bird flies upwards
+                    
+                    // Trigger bird effect
+                    vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
+                }
+            }
+        }
+
+        // Handle deactivation of birds that are no longer active
+        foreach (var kvp in previousBirdEffectStates)
+        {
+            string birdKey = kvp.Key;
+            if (!currentBirdStates.ContainsKey(birdKey) && kvp.Value)
+            {
+                // Parse the key to get indices
+                string[] parts = birdKey.Split('_');
+                if (parts.Length == 4)
+                {
+                    int faceIndex = int.Parse(parts[0]);
+                    int x = int.Parse(parts[1]);
+                    int z = int.Parse(parts[2]);
+                    int y = int.Parse(parts[3]);
+                    
+                    // Destroy bird effect
+                    vfxGenerator.DestroyVFXByIndex(faceIndex, x, z, y);
+                }
+            }
+        }
+
+        // Update previous states
+        previousBirdEffectStates = currentBirdStates;
+    }
+    #endregion
 }
