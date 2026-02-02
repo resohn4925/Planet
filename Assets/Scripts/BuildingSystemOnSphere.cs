@@ -1,4 +1,4 @@
-using Planet;
+﻿using Planet;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -662,7 +662,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
             return;
         }
 
-        // 1. 销毁不再活跃的飞鸟特效
         List<string> inactiveBirds = new List<string>();
         foreach (var kvp in previousBirdEffectStates)
         {
@@ -695,7 +694,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
             }
         }
 
-        // 2. 生成新的飞鸟特效
         foreach (string hintKey in newActiveHints)
         {
             string[] parts = hintKey.Split('_');
@@ -727,7 +725,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
                 var point = marchingCubeData.objPointArray[x, z, y];
                 Vector3 position = point.pos;
-                Vector3 direction = Vector3.up;
+                Vector3 direction = CalculateTangentDirection(position);
 
                 vfxGenerator.DestroyVFXByIndex(faceIndex, x, z, y);
                 vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
@@ -789,7 +787,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                                 previousBirdEffectStates[hintKey] = true;
 
                                 Vector3 position = point.pos;
-                                Vector3 direction = Vector3.up;
+                                Vector3 direction = CalculateTangentDirection(position);
                                 vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
                             }
                         }
@@ -799,4 +797,23 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
     }
     #endregion
+
+    private Vector3 CalculateTangentDirection(Vector3 position)
+    {
+        // 计算从原点(0,0,0)到position的径向方向
+        Vector3 radialDirection = position.normalized;
+        
+        // 使用一个参考向量来计算切线方向
+        // 这里使用Vector3.up作为参考，如果径向方向接近up方向，则使用Vector3.forward作为参考
+        Vector3 referenceVector = Vector3.up;
+        if (Vector3.Dot(radialDirection, referenceVector) > 0.9f)
+        {
+            referenceVector = Vector3.forward;
+        }
+        
+        // 计算切线方向：径向方向与参考向量的叉积
+        Vector3 tangentDirection = Vector3.Cross(radialDirection, referenceVector).normalized;
+        
+        return tangentDirection;
+    }
 }
