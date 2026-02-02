@@ -225,7 +225,7 @@ public class MarchingSquare : MonoBehaviour
         }
 
         GameObject mappedModule = modulePrefabsBasic.Find(obj =>
-            obj.name == mappedName);
+            obj.name == mappedName || obj.name == mappedName + ".prefab");
 
         if (mappedModule == null)
         {

@@ -317,8 +317,19 @@ public class MarchingCube : MonoBehaviour
             return null;
         }
 
-        GameObject mappedModule = modulePrefabsBasic.Find(obj =>
-            obj.name == mappedName);
+        // 检查是否在变体模式下，如果modulePrefabsBasic为空，则动态创建模块
+        GameObject mappedModule = null;
+        if (modulePrefabsBasic == null || modulePrefabsBasic.Count == 0)
+        {
+            // 变体模式：动态创建基础模块
+            mappedModule = CreateVariantModule(mappedName);
+        }
+        else
+        {
+            // 正常模式：从预加载的预制体中查找
+            mappedModule = modulePrefabsBasic.Find(obj =>
+                obj.name == mappedName || obj.name == mappedName + ".prefab");
+        }
 
         if (mappedModule == null)
         {
@@ -1025,5 +1036,77 @@ public class MarchingCube : MonoBehaviour
 
             return objPointArray[extendedX, extendedZ, y].isActive;
         }
+    }
+
+    /// <summary>
+    /// 在变体模式下动态创建基础模块
+    /// </summary>
+    private GameObject CreateVariantModule(string moduleName)
+    {
+        // 创建一个空的GameObject作为基础模块
+        GameObject variantModule = new GameObject(moduleName);
+        
+        // 根据模块名称的不同，添加不同的组件和配置
+        // 这里可以根据实际需求添加不同的几何形状或组件
+        
+        // 添加一个简单的立方体作为基础几何形状
+        MeshFilter meshFilter = variantModule.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = variantModule.AddComponent<MeshRenderer>();
+        
+        // 创建一个简单的立方体网格
+        Mesh cubeMesh = CreateCubeMesh();
+        meshFilter.mesh = cubeMesh;
+        
+        // 设置默认材质
+        meshRenderer.material = new Material(Shader.Find("Standard"));
+        
+        // 设置模块的默认大小
+        variantModule.transform.localScale = Vector3.one * spacing;
+        
+        return variantModule;
+    }
+
+    /// <summary>
+    /// 创建一个简单的立方体网格
+    /// </summary>
+    private Mesh CreateCubeMesh()
+    {
+        Mesh mesh = new Mesh();
+        
+        // 立方体的顶点
+        Vector3[] vertices = new Vector3[]
+        {
+            new Vector3(-0.5f, -0.5f, -0.5f),
+            new Vector3(0.5f, -0.5f, -0.5f),
+            new Vector3(0.5f, 0.5f, -0.5f),
+            new Vector3(-0.5f, 0.5f, -0.5f),
+            new Vector3(-0.5f, 0.5f, 0.5f),
+            new Vector3(0.5f, 0.5f, 0.5f),
+            new Vector3(0.5f, -0.5f, 0.5f),
+            new Vector3(-0.5f, -0.5f, 0.5f)
+        };
+        
+        // 立方体的三角形索引
+        int[] triangles = new int[]
+        {
+            // 前面
+            0, 2, 1, 0, 3, 2,
+            // 上面
+            2, 3, 4, 2, 4, 5,
+            // 后面
+            1, 2, 5, 1, 5, 6,
+            // 下面
+            0, 7, 4, 0, 4, 3,
+            // 左面
+            0, 1, 6, 0, 6, 7,
+            // 右面
+            4, 7, 6, 4, 6, 5
+        };
+        
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+        
+        return mesh;
     }
 }
