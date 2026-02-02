@@ -523,6 +523,16 @@ namespace Planet
             }
 
             GenerateObj();
+
+            // 清除所有VFX飞鸟并进行全量更新
+            var vfxGenerator = FindObjectOfType<VFXGenerator>();
+            if (vfxGenerator != null)
+            {
+                vfxGenerator.ClearAllVFX();
+            }
+            
+            // 触发全量飞鸟更新
+            buildingSystemOnSphere.TriggerAllBirdEffect();
         }
 
         public void Save()

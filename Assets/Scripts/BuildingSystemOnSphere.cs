@@ -9,7 +9,6 @@ using UnityEngine;
 public class BuildingSystemOnSphere : MonoBehaviour
 {
     public BuildingSystemBase buildingSystemBase;
-    public VFXGenerator vfxGenerator;
     [HideInInspector] public MarchingCube marchingCube;
     public ModifyMesh3d modifyMesh3D;
 
@@ -27,8 +26,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
     private RippleEffectURP rippleEffect;
     // 存储上一次的hint激活状态，用于增量更新
     private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
-
-    private Dictionary<string, bool> previousBirdEffectStates = new Dictionary<string, bool>();
 
     //测试用变量
     //public GameObject testHintObj;
@@ -311,6 +308,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
         {
             TriggerRippleEffect();
         }
+
+        // 触发全量飞鸟效果更新
+        TriggerAllBirdEffect();
     }
 
     /// <summary>
@@ -327,12 +327,13 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
         else { targetPipeline.GenerateObjIncremental(); }
 
-        UpdateHintIncremental(GetIncrementIndex());
+        List<string> indexs = GetIncrementIndex();
+        UpdateHintIncremental(indexs);
 
         // 触发波纹效果
         TriggerRippleEffect();
         // 触发飞鸟VFX
-        TriggerBirdEffect();
+        TriggerBirdEffect(indexs);
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -625,6 +626,8 @@ public class BuildingSystemOnSphere : MonoBehaviour
     }
 
     #region 特效相关
+    private VFXGenerator vfxGenerator;
+    private Dictionary<string, bool> previousBirdEffectStates = new Dictionary<string, bool>();
 
     private void TriggerRippleEffect()
     {
@@ -641,15 +644,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
         rippleEffect.ActivateRipple(lastClickPosition);
     }
 
-    private void TriggerBirdEffect()
+    private void TriggerBirdEffect(List<string> newActiveHints)
     {
-        return;
         if (vfxGenerator == null)
         {
             vfxGenerator = FindObjectOfType<VFXGenerator>();
             if (vfxGenerator == null)
             {
-                Debug.LogWarning("未找到VFXGenerator组件，无法触发飞鸟效果");
+                Debug.LogWarning("未找到VFXGenerator组件");
                 return;
             }
         }
@@ -660,19 +662,116 @@ public class BuildingSystemOnSphere : MonoBehaviour
             return;
         }
 
-        List<string> newActiveBirds = new List<string>();
-        Dictionary<string, bool> currentBirdStates = new Dictionary<string, bool>();
+        // 1. 销毁不再活跃的飞鸟特效
+        List<string> inactiveBirds = new List<string>();
+        foreach (var kvp in previousBirdEffectStates)
+        {
+            string birdKey = kvp.Key;
+            if (!_previousHintStates.ContainsKey(birdKey) || !_previousHintStates[birdKey])
+            {
+                inactiveBirds.Add(birdKey);
+            }
+        }
 
+        foreach (string birdKey in inactiveBirds)
+        {
+            string[] parts = birdKey.Split('_');
+            if (parts.Length < 5) continue;
+
+            try
+            {
+                CubeFace face = (CubeFace)System.Enum.Parse(typeof(CubeFace), parts[1], true);
+                int faceIndex = (int)face;
+                int x = int.Parse(parts[2]);
+                int z = int.Parse(parts[3]);
+                int y = int.Parse(parts[4]);
+
+                vfxGenerator.DestroyVFXByIndex(faceIndex, x, z, y);
+                previousBirdEffectStates.Remove(birdKey);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"解析birdKey失败: {birdKey}, 错误: {ex.Message}");
+            }
+        }
+
+        // 2. 生成新的飞鸟特效
+        foreach (string hintKey in newActiveHints)
+        {
+            string[] parts = hintKey.Split('_');
+            if (parts.Length < 5) continue;
+
+            try
+            {
+                CubeFace face = (CubeFace)System.Enum.Parse(typeof(CubeFace), parts[1], true);
+                int faceIndex = (int)face;
+                int x = int.Parse(parts[2]);
+                int z = int.Parse(parts[3]);
+                int y = int.Parse(parts[4]);
+
+                if (faceIndex < 0 || faceIndex >= marchingCube.marchingCubeDatas.Count) continue;
+
+                var marchingCubeData = marchingCube.marchingCubeDatas[faceIndex];
+                int layers = marchingCubeData.layers;
+                int topLayerIndex = layers - 1;
+                int faceSize = marchingCubeData.rows;
+
+                // 检查是否为顶层
+                if (y != topLayerIndex) continue;
+
+                if (x < 2 || x > faceSize - 1 || y < 2 || y > faceSize - 1) continue;
+
+                if (x < 0 || x >= marchingCubeData.objPointArray.GetLength(0) ||
+                    z < 0 || z >= marchingCubeData.objPointArray.GetLength(1) ||
+                    y < 0 || y >= marchingCubeData.objPointArray.GetLength(2)) continue;
+
+                var point = marchingCubeData.objPointArray[x, z, y];
+                Vector3 position = point.pos;
+                Vector3 direction = Vector3.up;
+
+                vfxGenerator.DestroyVFXByIndex(faceIndex, x, z, y);
+                vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
+                previousBirdEffectStates[hintKey] = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"解析hintKey失败: {hintKey}, 错误: {ex.Message}");
+            }
+        }
+    }
+
+    public void TriggerAllBirdEffect()
+    {
+        if (vfxGenerator == null)
+        {
+            vfxGenerator = FindObjectOfType<VFXGenerator>();
+            if (vfxGenerator == null)
+            {
+                Debug.LogWarning("未找到VFXGenerator组件");
+                return;
+            }
+        }
+
+        if (marchingCube == null || marchingCube.marchingCubeDatas == null)
+        {
+            Debug.LogWarning("marchingCube or marchingCubeDatas is null");
+            return;
+        }
+
+        // 清除所有现有飞鸟特效
+        vfxGenerator.ClearAllVFX();
+        previousBirdEffectStates.Clear();
+
+        // 全量更新飞鸟特效
         foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
         {
             int faceIndex = (int)marchingCubeData.cubeFace;
-            int layers = marchingCubeData.layers;
-            int topLayerIndex = layers - 1;
-            int faceSize = marchingCubeData.rows; // Assuming rows = columns = faceSize
+                int layers = marchingCubeData.layers;
+                int topLayerIndex = layers - 1;
+                int faceSize = marchingCubeData.rows;
 
-            // Iterate through all points in objPointArray
-            int extendedRows = marchingCubeData.rows + 2;
-            int extendedColumns = marchingCubeData.columns + 2;
+            int extendedRows = marchingCubeData.objPointArray.GetLength(0);
+            int extendedColumns = marchingCubeData.objPointArray.GetLength(1);
 
             for (int x = 0; x < extendedRows; x++)
             {
@@ -681,80 +780,23 @@ public class BuildingSystemOnSphere : MonoBehaviour
                     for (int y = 0; y < layers; y++)
                     {
                         var point = marchingCubeData.objPointArray[x, z, y];
-                        
-                        // Check if it's top layer
-                        if (y == topLayerIndex)
+                        if (point.isActive && y == topLayerIndex)
                         {
-                            // Check if it's not a boundary point
-                            // For a face of size N, boundaries are x=0, x=N+1, z=0, z=N+1 (since array is extended)
-                            bool isBoundary = (x == 0 || x == faceSize + 1 || z == 0 || z == faceSize + 1);
-                            
-                            if (!isBoundary && point.isActive)
+                            // 检查是否为边界点
+                            if (x >= 2 && x <= faceSize - 1 && z >= 2 && z <= faceSize - 1)
                             {
-                                string birdKey = $"{faceIndex}_{x}_{z}_{y}";
-                                currentBirdStates[birdKey] = true;
-                                
-                                if (!previousBirdEffectStates.ContainsKey(birdKey) || !previousBirdEffectStates[birdKey])
-                                {
-                                    newActiveBirds.Add(birdKey);
-                                }
+                                string hintKey = $"Hint_{marchingCubeData.cubeFace}_{x}_{z}_{y}";
+                                previousBirdEffectStates[hintKey] = true;
+
+                                Vector3 position = point.pos;
+                                Vector3 direction = Vector3.up;
+                                vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
                             }
                         }
                     }
                 }
             }
         }
-
-        // Handle incremental changes
-        if (newActiveBirds.Count > 0)
-        {
-            foreach (string birdKey in newActiveBirds)
-            {
-                Debug.Log($"changedbird索引为{birdKey}");
-                // Parse the key to get indices
-                string[] parts = birdKey.Split('_');
-                if (parts.Length == 4)
-                {
-                    int faceIndex = int.Parse(parts[0]);
-                    int x = int.Parse(parts[1]);
-                    int z = int.Parse(parts[2]);
-                    int y = int.Parse(parts[3]);
-                    
-                    // Get the point position and direction
-                    var marchingCubeData = marchingCube.marchingCubeDatas[faceIndex];
-                    var point = marchingCubeData.objPointArray[x, z, y];
-                    Vector3 position = point.pos;
-                    Vector3 direction = Vector3.up; // Assuming bird flies upwards
-                    
-                    // Trigger bird effect
-                    vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
-                }
-            }
-        }
-
-        // Handle deactivation of birds that are no longer active
-        foreach (var kvp in previousBirdEffectStates)
-        {
-            string birdKey = kvp.Key;
-            if (!currentBirdStates.ContainsKey(birdKey) && kvp.Value)
-            {
-                // Parse the key to get indices
-                string[] parts = birdKey.Split('_');
-                if (parts.Length == 4)
-                {
-                    int faceIndex = int.Parse(parts[0]);
-                    int x = int.Parse(parts[1]);
-                    int z = int.Parse(parts[2]);
-                    int y = int.Parse(parts[3]);
-                    
-                    // Destroy bird effect
-                    vfxGenerator.DestroyVFXByIndex(faceIndex, x, z, y);
-                }
-            }
-        }
-
-        // Update previous states
-        previousBirdEffectStates = currentBirdStates;
     }
     #endregion
 }
