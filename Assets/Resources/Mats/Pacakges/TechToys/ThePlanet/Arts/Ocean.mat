@@ -199,7 +199,7 @@ Material:
     - _Foam: 1
     - _FoamBegin: 0
     - _FoamDistort: 0.737
-    - _FoamNormalRange: 0.288
+    - _FoamNormalRange: 0.2
     - _FoamNormalRangeEnd: 0.94746053
     - _FoamOffset: 0.18
     - _FoamRange: 0.13134852
