@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class VFXGenerator : MonoBehaviour
 {
@@ -78,16 +81,33 @@ public class VFXGenerator : MonoBehaviour
         {
             if (kvp.Value != null)
             {
-                Destroy(kvp.Value);
+#if UNITY_EDITOR
+                if (Application.isEditor && !Application.isPlaying)
+                {
+                    DestroyImmediate(kvp.Value);
+                }
+                else
+#endif
+                {
+                    Destroy(kvp.Value);
+                }
             }
         }
         vfxInstances.Clear();
 
-        // Also clear any remaining VFX objects under VFX parent
         GetVFXParent();
         foreach (Transform child in vfxParent.transform)
         {
-            Destroy(child.gameObject);
+#if UNITY_EDITOR
+            if (Application.isEditor && !Application.isPlaying)
+            {
+                DestroyImmediate(child.gameObject);
+            }
+            else
+#endif
+            {
+                Destroy(child.gameObject);
+            }
         }
     }
 }

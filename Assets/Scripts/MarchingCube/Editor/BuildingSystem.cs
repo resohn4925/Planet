@@ -408,6 +408,9 @@ public class BuildingSystem : EditorWindow
         //表现层,展示所有可建造的地块
         UpdateHint();
         buildingSystemBase.UpdateAllHintMesh("HintRoot", false);
+        
+        // 隐藏ModifiedHintRoot中的所有modifiedhintobj
+        buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
     }
 
     public void UpdateHint()

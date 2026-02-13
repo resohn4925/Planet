@@ -75,7 +75,11 @@ namespace Planet
 
             CreateInvalidRoot("Root");
             CreateRoot("ModifiedRoot", true);
-            //CreateRoot("HintRoot", true); 
+            CreateRoot("HintRoot", true);
+            CreateRoot("ModifiedHintRoot", true);
+            modifiedRoot = GameObject.Find("ModifiedRoot");
+            marchingCube.hintModuleCollection = GameObject.Find("HintRoot");
+            buildingSystemOnSphere.modifiedHintRoot = GameObject.Find("ModifiedHintRoot");
 
             SetAllModifyPointDatas();
             SetAllObjPointDatas();
@@ -119,7 +123,7 @@ namespace Planet
 
         public void CreateRoot(string rootName, bool isClear)
         {
-            modifiedRoot = GameObject.Find(rootName);
+            GameObject modifiedRoot = GameObject.Find(rootName);
             if (modifiedRoot != null)
             {
                 if (isClear)
@@ -548,6 +552,7 @@ namespace Planet
         {
             CreateInvalidRoot("Root");
             CreateRoot("ModifiedRoot", true);
+            modifiedRoot = GameObject.Find("ModifiedRoot");
             ClearAllModules();
             ModifyAllModules();
         }
@@ -557,8 +562,8 @@ namespace Planet
         /// </summary>
         public void GenerateObjIncremental()
         {
-            CreateInvalidRoot("Root");
-            CreateRoot("ModifiedRoot", true);
+            //CreateInvalidRoot("Root");
+            //CreateRoot("ModifiedRoot", true);
             ModifyAllModules();
         }
 
@@ -756,6 +761,7 @@ namespace Planet
 
                         GameObject newParentObj = new();
                         newParentObj.name = parentObj.name + "_modified";
+                        Debug.Log(modifiedRoot);
                         newParentObj.transform.SetParent(modifiedRoot.transform);
 
                         if (targetModuleObj == null)

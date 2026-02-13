@@ -70,9 +70,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             sceneView.Repaint();
         }
 
-        //表现层,展示所有可建造的地块
         UpdateHint();
-        //首次增量更新，防止阻塞
         UpdateHintIncremental(GetIncrementIndex());
     }
 
