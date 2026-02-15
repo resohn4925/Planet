@@ -562,16 +562,12 @@ namespace Planet
         /// </summary>
         public void GenerateObjIncremental()
         {
-            Debug.Log("obj更新");
-
             buildingSystemOnSphere.UpdateIncrementalIndex();
-            List<string> faces = buildingSystemOnSphere.faceIndexs;
-            foreach (var face in faces)
+            foreach(var affectedFaceIndex in buildingSystemOnSphere.faceObjIndexs)
             {
-                Debug.Log(face);
-                //ClearFaceModules(face);
+                ClearFaceModules(affectedFaceIndex);
 
-                //ModifyFaceModules(face);
+                ModifyFaceModules(affectedFaceIndex);
             }
         }
 
@@ -914,6 +910,41 @@ namespace Planet
                 
             //    isVFXActive = !isVFXActive;
             //}
+        }
+
+        /// <summary>
+        /// 从提示字符串中提取面类型
+        /// </summary>
+        /// <param name="hintString">提示字符串，格式为"Hint_{cubeFace}_{x}_{z}_{y}"</param>
+        /// <returns>面类型字符串，如果无效返回空字符串</returns>
+        private string ExtractFaceTypeFromHintString(string hintString)
+        {
+            if (string.IsNullOrEmpty(hintString) || !hintString.StartsWith("Hint_"))
+                return "";
+
+            string[] parts = hintString.Split('_');
+            if (parts.Length < 2)
+                return "";
+
+            return parts[1];
+        }
+
+        private int ExtractFaceIndexFromHintString(string hintString)
+        {
+            string cubeFace = ExtractFaceTypeFromHintString(hintString);
+            if (string.IsNullOrEmpty(cubeFace))
+                return -1;
+            
+            switch (cubeFace)
+            {
+                case "Top": return 0;
+                case "Bottom": return 1;
+                case "Front": return 2;
+                case "Back": return 3;
+                case "Left": return 4;
+                case "Right": return 5;
+                default: return -1;
+            }
         }
 
         public void SwitchGeometry()

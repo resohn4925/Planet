@@ -27,6 +27,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
     // 存储上一次的hint激活状态，用于增量更新
     private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
     [HideInInspector]public List<string> faceIndexs = new();
+    [HideInInspector] public List<int> faceObjIndexs = new();
 
     //测试用变量
     //public GameObject testHintObj;
@@ -160,11 +161,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
         return newActiveHints;
     }
 
-    public List<string> GetComponentIndex()
-    {
-        return GetIncrementIndex();
-    }
-
     public void UpdateHintIncremental(List<string> newActiveHints)
     {
         marchingCube.UpdateHint(marchingCube);
@@ -239,8 +235,8 @@ public class BuildingSystemOnSphere : MonoBehaviour
             buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
             if (!currentHitObj.name.StartsWith("Hint_"))
             {
-                    buildingSystemBase.UpdateHintMesh(currentHitObj, true);
-                }
+                buildingSystemBase.UpdateHintMesh(currentHitObj, true);
+            }
                 //根据名字计算currentobj的face,x,y,z索引
                 //SetOverlapPoint逻辑计算该物件的overlap物件索引
                 //激活overlap物件
@@ -262,6 +258,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                     if (currentBuildingMode == BuildingMode.Build)
                     {
                         buildingSystemBase.ActivateModule(currentHitObj.name, marchingCube);
+                        
                         //这里用全量更新会产生严重性能开销
                         //CreateModule();
                         IncrementalCreateModule();
@@ -562,6 +559,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
 
         Vector3 pos = marchingCube.marchingCubeDatas[(int)face].objPointArray[xIndex, zIndex, 0].pos;
+
+        faceObjIndexs.Clear();
+
         foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
         {
             foreach (var objPointData in marchingCubeData.objPointDatas)
@@ -569,7 +569,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 if (objPointData.pos == pos)
                 {
                     string hintNameOverlap = $"Hint_{marchingCubeData.cubeFace}_{objPointData.xIndex}_{objPointData.zIndex}_{yIndex}_modified";
+                    faceObjIndexs.Add((int)marchingCubeData.cubeFace);
                     //Debug.Log($"{hintName}的重合点是{hintNameOverlap}");
+
                     GameObject currentHintObj = GameObject.Find(hintNameOverlap);
                     if (currentHintObj == null)
                     {
