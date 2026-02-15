@@ -26,6 +26,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
     private RippleEffectURP rippleEffect;
     // 存储上一次的hint激活状态，用于增量更新
     private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
+    [HideInInspector]public List<string> faceIndexs = new();
 
     //测试用变量
     //public GameObject testHintObj;
@@ -71,7 +72,11 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
 
         UpdateHint();
-        UpdateHintIncremental(GetIncrementIndex());
+        UpdateIncrementalIndex();
+        UpdateHintIncremental(faceIndexs);
+
+        // 隐藏ModifiedHintRoot中的所有modifiedhintobj
+        buildingSystemBase.UpdateAllHintMesh("ModifiedHintRoot", false);
     }
 
     private void StopEditing()
@@ -85,6 +90,12 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         marchingCube.ClearAllHintInstances();
         ClearAllModifiedHints();
+    }
+
+    public void UpdateIncrementalIndex()
+    {
+        faceIndexs.Clear();
+        faceIndexs = GetIncrementIndex();
     }
 
     public void UpdateHint()
@@ -116,7 +127,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             int xSize = hintArray.GetLength(0);
             int zSize = hintArray.GetLength(1);
             int ySize = hintArray.GetLength(2);
-
+            
             for (int x = 0; x < xSize; x++)
             {
                 for (int z = 0; z < zSize; z++)
@@ -147,6 +158,11 @@ public class BuildingSystemOnSphere : MonoBehaviour
         _previousHintStates = currentHintStates;
 
         return newActiveHints;
+    }
+
+    public List<string> GetComponentIndex()
+    {
+        return GetIncrementIndex();
     }
 
     public void UpdateHintIncremental(List<string> newActiveHints)
@@ -325,13 +341,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
         else { targetPipeline.GenerateObjIncremental(); }
 
-        List<string> indexs = GetIncrementIndex();
-        UpdateHintIncremental(indexs);
+        //UpdateIncrementalIndex();
+        UpdateHintIncremental(faceIndexs);
+        //Debug.Log("hintobj更新");
 
         // 触发波纹效果
         TriggerRippleEffect();
         // 触发飞鸟VFX
-        TriggerBirdEffect(indexs);
+        TriggerBirdEffect(faceIndexs);
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -562,13 +579,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 }
             }
         }
-
-        //if(hintName == "Hint_Left_7_10_0_modified")
-        //{
-        //    GameObject overlapObj = GameObject.Find("Hint_Top_0_3_0_modified");
-        //    buildingSystemBase.UpdateHintMesh(overlapObj, true);
-        //}
-
     }
 
     public void SwitchBuildingMode(BuildingMode mode)

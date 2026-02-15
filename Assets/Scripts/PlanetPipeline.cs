@@ -562,9 +562,17 @@ namespace Planet
         /// </summary>
         public void GenerateObjIncremental()
         {
-            //CreateInvalidRoot("Root");
-            //CreateRoot("ModifiedRoot", true);
-            ModifyAllModules();
+            Debug.Log("obj更新");
+
+            buildingSystemOnSphere.UpdateIncrementalIndex();
+            List<string> faces = buildingSystemOnSphere.faceIndexs;
+            foreach (var face in faces)
+            {
+                Debug.Log(face);
+                //ClearFaceModules(face);
+
+                //ModifyFaceModules(face);
+            }
         }
 
         public void ActivateObj()
@@ -669,6 +677,27 @@ namespace Planet
             SetOverlapPoint(faceIndex, x, y, z, false);
         }
 
+        /// <summary>
+        /// 从MarchingCubeData对象获取对应的面索引
+        /// </summary>
+        /// <param name="marchingCubeData">MarchingCubeData对象</param>
+        /// <returns>面索引</returns>
+        private int GetFaceIndexFromMarchingCubeData(MarchingCube.MarchingCubeData marchingCubeData)
+        {
+            if (marchingCube == null || marchingCube.marchingCubeDatas == null)
+                return -1;
+
+            for (int i = 0; i < marchingCube.marchingCubeDatas.Count; i++)
+            {
+                if (marchingCube.marchingCubeDatas[i] == marchingCubeData)
+                {
+                    return i;
+                }
+            }
+            
+            return -1;
+        }
+
         public void ClearAllModules()
         {
             if (marchingCube.moduleInstances != null)
@@ -702,6 +731,66 @@ namespace Planet
             }
 
             modifyMesh3D.ClearAllModules();
+        }
+
+        /// <summary>
+        /// 清除指定面上的所有模块和灯光
+        /// </summary>
+        /// <param name="faceIndex">面索引</param>
+        public void ClearFaceModules(int faceIndex)
+        {
+            if (marchingCube == null || marchingCube.marchingCubeDatas == null || faceIndex < 0 || faceIndex >= marchingCube.marchingCubeDatas.Count)
+                return;
+
+            var cubeData = marchingCube.marchingCubeDatas[faceIndex];
+            
+            if (cubeData.faceModuleInstances != null)
+            {
+                foreach (GameObject module in cubeData.faceModuleInstances)
+                {
+                    if (module != null)
+                    {
+                        DestroyImmediate(module);
+                    }
+                }
+                cubeData.faceModuleInstances.Clear();
+            }
+
+            if (modifiedRoot != null)
+            {
+                List<GameObject> modulesToDestroy = new List<GameObject>();
+                
+                string facePrefix = "Face" + faceIndex + "_";
+                
+                foreach (Transform child in modifiedRoot.transform)
+                {
+                    if (child.gameObject.name.StartsWith(facePrefix))
+                    {
+                        modulesToDestroy.Add(child.gameObject);
+                    }
+                }
+                
+                foreach (GameObject module in modulesToDestroy)
+                {
+                    DestroyImmediate(module);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 修改指定面上的所有模块
+        /// </summary>
+        /// <param name="faceIndex">面索引</param>
+        public void ModifyFaceModules(int faceIndex)
+        {
+            if (marchingCube == null || marchingCube.marchingCubeDatas == null || faceIndex < 0 || faceIndex >= marchingCube.marchingCubeDatas.Count)
+                return;
+
+            var marchingCubeData = marchingCube.marchingCubeDatas[faceIndex];
+            
+            marchingCube.UpdateModules(marchingCubeData);
+
+            ModifyModule(marchingCubeData);
         }
 
         public void ModifyAllModules()
@@ -760,8 +849,7 @@ namespace Planet
                         }
 
                         GameObject newParentObj = new();
-                        newParentObj.name = parentObj.name + "_modified";
-                        Debug.Log(modifiedRoot);
+                        newParentObj.name = "Face" + GetFaceIndexFromMarchingCubeData(marchingCubeData) + "_" + parentObj.name + "_modified";
                         newParentObj.transform.SetParent(modifiedRoot.transform);
 
                         if (targetModuleObj == null)
@@ -770,18 +858,11 @@ namespace Planet
                             continue;
                         }
 
-                        Debug.Log($"模块索引{modulePointData.xIndex}{modulePointData.yIndex}{modulePointData.zIndex}，对应物件：{targetModuleObj.name}，位置：{targetModuleObj.transform.position}");
-
                         modifyPointPos = marchingCubeData.GetModifyPointsAroundModule(
                             modulePointData.xIndex,
                             modulePointData.yIndex,
                             modulePointData.zIndex
                         );
-
-                        //foreach(var pos in modifyPointPos)
-                        //{
-                        //    Debug.Log(pos);
-                        //}
 
                         Matrix4x4 worldMatrix = parentObj.transform.localToWorldMatrix * targetModuleObj.transform.localToWorldMatrix;
                         modifyMesh3D.GenerateModule(modifyPointPos, targetModuleObj, newParentObj, height, worldMatrix);
