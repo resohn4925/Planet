@@ -1,6 +1,5 @@
 ﻿using Planet;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -337,15 +336,13 @@ public class BuildingSystemOnSphere : MonoBehaviour
             Debug.LogError("找不到planetpipeline,请先创建");
         }
         else { targetPipeline.GenerateObjIncremental(); }
-
-        //UpdateIncrementalIndex();
         UpdateHintIncremental(faceIndexs);
-        //Debug.Log("hintobj更新");
 
         // 触发波纹效果
         TriggerRippleEffect();
         // 触发飞鸟VFX
-        TriggerBirdEffect(faceIndexs);
+        TriggerAllBirdEffect();
+        //TriggerBirdEffect(faceIndexs);
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -598,43 +595,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
     }
 
-    private Vector3 GetHitPoint(Ray ray, GameObject targetObj)
-    {
-        RaycastHit[] hits = Physics.RaycastAll(ray);
-
-        foreach (RaycastHit hit in hits)
-        {
-            GameObject hitObj = hit.collider.gameObject;
-
-            if (hitObj == targetObj)
-            {
-                return hit.point;
-            }
-
-            if (hitObj.name.StartsWith("Hint_") && hitObj.name.Contains("_modified"))
-            {
-                return hit.point;
-            }
-        }
-
-        foreach (RaycastHit hit in hits)
-        {
-            GameObject hitObj = hit.collider.gameObject;
-
-            if (hitObj.name.StartsWith("Hint_"))
-            {
-                return hit.point;
-            }
-        }
-
-        if (targetObj != null)
-        {
-            return targetObj.transform.position;
-        }
-
-        return Vector3.zero;
-    }
-
     #region 特效相关
     private VFXGenerator vfxGenerator;
     private Dictionary<string, bool> previousBirdEffectStates = new Dictionary<string, bool>();
@@ -774,12 +734,14 @@ public class BuildingSystemOnSphere : MonoBehaviour
         foreach (var marchingCubeData in marchingCube.marchingCubeDatas)
         {
             int faceIndex = (int)marchingCubeData.cubeFace;
-                int layers = marchingCubeData.layers;
-                int topLayerIndex = layers - 1;
-                int faceSize = marchingCubeData.rows;
+            int layers = marchingCubeData.layers;
+            int topLayerIndex = layers - 1;
+            int faceSize = marchingCubeData.rows;
 
             int extendedRows = marchingCubeData.objPointArray.GetLength(0);
             int extendedColumns = marchingCubeData.objPointArray.GetLength(1);
+
+            int birdCountPerFace = 0;
 
             for (int x = 0; x < extendedRows; x++)
             {
@@ -787,18 +749,30 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 {
                     for (int y = 0; y < layers; y++)
                     {
+                        if (birdCountPerFace >= 2)
+                            break;
+
                         var point = marchingCubeData.objPointArray[x, z, y];
                         if (point.isActive && y == topLayerIndex)
                         {
                             // 检查是否为边界点
                             if (x >= 2 && x <= faceSize - 1 && z >= 2 && z <= faceSize - 1)
                             {
-                                string hintKey = $"Hint_{marchingCubeData.cubeFace}_{x}_{z}_{y}";
-                                previousBirdEffectStates[hintKey] = true;
+                                bool shouldGenerate = true;
 
-                                Vector3 position = point.pos;
-                                Vector3 direction = CalculateTangentDirection(position);
-                                vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
+                                if (shouldGenerate)
+                                {
+                                    Debug.Log("生产");
+                                    string hintKey = $"Hint_{marchingCubeData.cubeFace}_{x}_{z}_{y}";
+                                    previousBirdEffectStates[hintKey] = true;
+
+                                    Vector3 position = point.pos;
+                                    Vector3 direction = CalculateTangentDirection(position);
+                                    vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
+                                    
+                                    // 增加该面的飞鸟计数
+                                    birdCountPerFace++;
+                                }
                             }
                         }
                     }
