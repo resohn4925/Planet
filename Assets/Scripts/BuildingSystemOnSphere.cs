@@ -762,7 +762,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
                                 if (shouldGenerate)
                                 {
-                                    Debug.Log("生产");
                                     string hintKey = $"Hint_{marchingCubeData.cubeFace}_{x}_{z}_{y}";
                                     previousBirdEffectStates[hintKey] = true;
 
