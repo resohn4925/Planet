@@ -107,7 +107,7 @@ Material:
     - _OutlineNoise: 1
     - _OutlineNoiseScale: 0
     - _OutlineSize: 34.54
-    - _OutlineWidth: 0.18
+    - _OutlineWidth: 0.05
     - _RimBlend: 0
     - _RimLightColor: 1
     - _RimLightIntensity: 0.048
