@@ -1,7 +1,17 @@
-﻿Shader "PCGOcean"
+﻿Shader "PCGOcean_With_Outline"
 {
     Properties
     {
+        // ==========================================
+        // [新增] 描边控制属性
+        // ==========================================
+        [Header(Outline Settings)]
+        _OutlineColor("Outline Color", Color) = (0,0,0,1)
+        _OutlineWidth("Outline Width", Range(0, 0.5)) = 0.05
+
+        // ==========================================
+        // [原始] PCGOcean 属性 (完全保留)
+        // ==========================================
     	[Header(Skybox)]
     	[NoScaleOffset]_SkyboxTex("Skybox Cubemap", Cube) = "white" {}
     	_SkyboxIntensity("Skybox Intensity", Range(0, 5)) = 1.0
@@ -42,7 +52,7 @@
     	[Toggle(_FRESNEL)]_Fresnel("Enable",int)=1
 		[MinMaxRange]_FresnelRange("Range ",Range(0,1))=0.1
     	[HideInInspector]_FresnelRangeEnd("",float)=0.2
-    	
+ 
     	[Header(_Refraction)]
     	[Toggle(_DEPTHREFRACTION)] _DepthRefraction("Enable",int)=1
     	[Foldout(_DEPTHREFRACTION)] _RefractionDistance("Refraction Distance",Range(0.01,5))=1 
@@ -56,15 +66,95 @@
     	[MinMaxRange]_FoamNormalRange("Normal Range ",Range(0,1))=0.9
     	[HideInInspector]_FoamNormalRangeEnd("",float)=1
     	[Foldout(_FOAM)]_FoamDistort("Distort",Range(0.01,1))=1
-    	
     }
     
     SubShader
     {
-        Tags { "Queue"="Transparent-1"}
-		Blend Off
-    	ZTest Less
-    	ZWrite On
+        Tags { "Queue"="Transparent-1" "RenderPipeline" = "UniversalPipeline" }
+
+        // ------------------------------------------------------------------
+        // [新增] Pass 1: Outline (借鉴 Tatoon 的做法)
+        // ------------------------------------------------------------------
+        Pass
+        {
+            Name "Outline"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+            Cull Front
+            ZWrite On
+            ZTest LEqual
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma shader_feature_local_vertex _WAVE
+
+            #include "Assets/Resources/shader/Library/Common.hlsl"
+
+            // 这里必须包含所有用到的变量，且名称与 Properties 一致
+            INSTANCING_BUFFER_START
+                INSTANCING_PROP(float4, _OutlineColor)
+                INSTANCING_PROP(float, _OutlineWidth)
+                INSTANCING_PROP(float, _Radius)
+                INSTANCING_PROP(float4, _WaveST1)
+                INSTANCING_PROP(float, _WaveAmplitude1)
+                INSTANCING_PROP(float4, _WaveST2)
+                INSTANCING_PROP(float, _WaveAmplitude2)
+            INSTANCING_BUFFER_END
+
+            struct a2v {
+                float3 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct v2f {
+                float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            // 同步原有的波浪函数
+            float3 GerstnerWave_Outline(float2 uv, float4 waveST, float amplitude, float3 normal)
+            {
+                float2 flowUV = uv + _Time.y * waveST.xy * waveST.zw;
+                float flowSin = flowUV.x * waveST.x + flowUV.y * waveST.y;
+                return normal * sin(flowSin * PI) * amplitude;
+            }
+
+            v2f vert(a2v v)
+            {
+                v2f o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+
+                // 计算原始位置 (同步主 Pass 逻辑)
+                float3 positionWSNormalized = normalize(TransformObjectToWorld(v.positionOS));
+                float3 positionWS = positionWSNormalized * INSTANCE(_Radius);
+                float3 normalWS = positionWSNormalized;
+
+                #if _WAVE
+                    positionWS += GerstnerWave_Outline(v.uv, INSTANCE(_WaveST1), INSTANCE(_WaveAmplitude1), normalWS);
+                    positionWS += GerstnerWave_Outline(v.uv, INSTANCE(_WaveST2), INSTANCE(_WaveAmplitude2), normalWS);
+                #endif
+
+                // 描边挤出逻辑
+                positionWS += normalWS * INSTANCE(_OutlineWidth);
+
+                o.positionCS = TransformWorldToHClip(positionWS);
+                return o;
+            }
+
+            half4 frag(v2f i) : SV_Target {
+                UNITY_SETUP_INSTANCE_ID(i);
+                return INSTANCE(_OutlineColor);
+            }
+            ENDHLSL
+        }
+
+        // ------------------------------------------------------------------
+        // [原始] Pass 2: ForwardLit (完全恢复你的原始逻辑)
+        // ------------------------------------------------------------------
         Pass
         {
 			Tags {"LightMode"="UniversalForward"}
@@ -75,7 +165,7 @@
             #pragma multi_compile_fog
 			#pragma multi_compile_fragment _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
-            
+         
             #pragma shader_feature_local_vertex _WAVE
             #pragma shader_feature_local_fragment _NORMALTEX
 			#pragma shader_feature_local_fragment _FOAM
@@ -89,53 +179,45 @@
 			#include "Assets/Resources/shader/Library/Lighting/ScreenSpacePlanarReflection.hlsl"
 
 			TEXTURE2D(_NormalTex); SAMPLER(sampler_NormalTex);
-            TEXTURE2D(_FlowTex);SAMPLER(sampler_FlowTex);
-			TEXTURE2D(_CameraOpaqueTexture);SAMPLER(sampler_CameraOpaqueTexture);
-            TEXTURE2D(_CameraDepthTexture);SAMPLER(sampler_CameraDepthTexture);
-            
-            // 添加天空盒纹理声明
+            TEXTURE2D(_FlowTex); SAMPLER(sampler_FlowTex);
+			TEXTURE2D(_CameraOpaqueTexture); SAMPLER(sampler_CameraOpaqueTexture);
+            TEXTURE2D(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
             TEXTURECUBE(_SkyboxTex); SAMPLER(sampler_SkyboxTex);
-            
+
 			INSTANCING_BUFFER_START
-			    // 添加天空盒相关属性
+                // 新增描边属性到此 Buffer 保证一致性 [cite: 7]
+                INSTANCING_PROP(float4, _OutlineColor)
+                INSTANCING_PROP(float, _OutlineWidth)
+                
 			    INSTANCING_PROP(float, _SkyboxIntensity)
 			    INSTANCING_PROP(float, _SkyboxMip)
-			    
 				INSTANCING_PROP(float4,_Color)
 				INSTANCING_PROP(float,_Radius)
 				INSTANCING_PROP(float,_NormalStrength)
 				INSTANCING_PROP(float4,_FlowST1)
 				INSTANCING_PROP(float4,_FlowST2)
-
 				INSTANCING_PROP(float4,_WaveST1)
 				INSTANCING_PROP(float,_WaveAmplitude1)
             	INSTANCING_PROP(float4,_WaveST2)
 				INSTANCING_PROP(float,_WaveAmplitude2)
-            
 				INSTANCING_PROP(float,_SpecularAmount)
 				INSTANCING_PROP(float,_SpecularStrength)
-            
 				INSTANCING_PROP(float,_RefractionDistance)
 				INSTANCING_PROP(float,_RefractionAmount)
-            
 				INSTANCING_PROP(float4,_ReflectionColor)
 				INSTANCING_PROP(int,_ReflectionOffset)
 				INSTANCING_PROP(float,_ReflectionDistort)
-            
 	            INSTANCING_PROP(float4,_FoamColor)
 				INSTANCING_PROP(float,_FoamRange)
 				INSTANCING_PROP(float,_FoamRangeEnd)
 				INSTANCING_PROP(float,_FoamNormalRange)
 				INSTANCING_PROP(float,_FoamNormalRangeEnd)
-            
 				INSTANCING_PROP(float,_FoamDistort)
 	            INSTANCING_PROP(float4,_DepthColor)
 				INSTANCING_PROP(float,_DepthRange)
 				INSTANCING_PROP(float,_DepthRangeEnd)
-
 				INSTANCING_PROP(float,_FresnelRange)
 				INSTANCING_PROP(float,_FresnelRangeEnd)
-            
 			INSTANCING_BUFFER_END
 
             struct a2v
@@ -146,11 +228,10 @@
 			    float2 uv:TEXCOORD0;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-
             struct v2f
             {
 			    float4 positionCS : SV_POSITION;
-            	float4 positionHCS:TEXCOORD0;
+			    float4 positionHCS:TEXCOORD0;
             	float3 positionWS:TEXCOORD1;
 				half3 normalWS:TEXCOORD2;
 				half3 tangentWS:TEXCOORD3;
@@ -158,7 +239,7 @@
 				float3 viewDirWS:TEXCOORD5;
             	float3 cameraDirWS:TEXCOORD6;
             	float2 uv:TEXCOORD7;
-            	V2F_FOG(8)
+				V2F_FOG(8)
 				UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -166,30 +247,24 @@
 			{
 				float2 flowUV=uv+_Time.y*waveST.xy*waveST.zw;
 				float flowSin=flowUV.x*waveST.x+flowUV.y*waveST.y;
-				float sinFlow = sin(flowSin*PI);
-				return normal*sinFlow*amplitude;
+				return normal*sin(flowSin*PI)*amplitude;
 			}
             
-            // 完全自定义的天空盒采样函数，不依赖任何场景设置
             half3 SampleCustomSkybox(float3 reflectDirWS)
             {
-                // 只使用Shader面板中指定的天空盒贴图
                 half4 skyboxSample = SAMPLE_TEXTURECUBE_LOD(_SkyboxTex, sampler_SkyboxTex, reflectDirWS, INSTANCE(_SkyboxMip));
                 return skyboxSample.rgb * INSTANCE(_SkyboxIntensity);
             }
             
-            // 替换原有的IndirectDiffuse_SH函数，避免使用场景光照探针
             half3 GetCustomIndirectDiffuse(float3 normalWS)
             {
-                // 使用一个基础的环境光照，而不是场景的光照探针
-                // 这样可以确保不受场景光照设置的影响
-                return half3(0.05, 0.05, 0.1); // 基础的蓝色环境光
+                return half3(0.05, 0.05, 0.1); 
             }
             
             v2f vert (a2v v)
             {
                 v2f o;
-				UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_SETUP_INSTANCE_ID(v);
 				UNITY_TRANSFER_INSTANCE_ID(v,o);
 	          	float3 positionWSNormalized = normalize(TransformObjectToWorld(v.positionOS));
             	float3 positionWS= positionWSNormalized * INSTANCE(_Radius);
@@ -230,7 +305,7 @@
             	float fresnel=1;
             	#if _FRESNEL
             		fresnel = 1-saturate(invlerp(INSTANCE(_FresnelRange),INSTANCE(_FresnelRangeEnd),dot(viewDirWS,normalWS)));
-				#endif
+            	#endif
 
             	float3 albedo=INSTANCE(_Color).rgb;
             	float2 screenUV=TransformHClipToNDC(i.positionHCS);
@@ -259,20 +334,16 @@
             	float eyeDepthOffset=eyeDepthUnder-eyeDepthSurface;
 
             	float2 deepSurfaceUV=screenUV;
-				#if _DEPTHREFRACTION
+            	#if _DEPTHREFRACTION
 					float refraction=saturate(invlerp(0,INSTANCE(_RefractionDistance),eyeDepthOffset))*INSTANCE(_RefractionAmount);
             		deepSurfaceUV+=normalTS.xy*refraction*rcp(eyeDepthUnder);
             	#endif
             	
-            	// 使用自定义的环境光照，避免使用场景光照探针
             	half3 indirectDiffuse = GetCustomIndirectDiffuse(normalWS);
-            	
-            	// 只使用自定义天空盒，完全忽略场景天空盒
             	half3 indirectSpecular = SampleCustomSkybox(reflectDirWS);
             	
             	float3 deepSurfaceColor=SAMPLE_TEXTURE2D(_CameraOpaqueTexture,sampler_CameraOpaqueTexture,deepSurfaceUV).rgb;
-            	
-				#if _DEPTH
+            	#if _DEPTH
             		float depth=saturate(invlerp(INSTANCE(_DepthRange),INSTANCE(_DepthRangeEnd),eyeDepthOffset));
             		float4 depthSample=INSTANCE(_DepthColor);
             		float3 depthCol=lerp(deepSurfaceColor,depthSample.rgb,depthSample.a);
@@ -280,7 +351,6 @@
             	#endif
             	
             	float3 aboveSurfaceColor=albedo*indirectDiffuse+indirectSpecular;
-            	
             	float4 reflectionSample = IndirectSSRSpecular(screenUV,eyeDepthSurface,normalTS,INSTANCE(_ReflectionDistort));
             	float4 reflectionColor =  INSTANCE(_ReflectionColor);
 
@@ -307,19 +377,5 @@
             ENDHLSL
         }
     }
-    
-    // SubShader
-    // {
-    //     Tags { "Queue"="Transparent-1" "RenderType"="Transparent" }
-    //     Pass
-    //     {
-    //         Tags {"LightMode"="Always"}
-    //         HLSLPROGRAM
-    //         #pragma vertex vert
-    //         #pragma fragment frag
-    //         ENDHLSL
-    //     }
-    // }
-    
     Fallback "Transparent/VertexLit"
 }

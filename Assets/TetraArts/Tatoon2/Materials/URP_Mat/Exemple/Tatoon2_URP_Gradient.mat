@@ -130,7 +130,7 @@ Material:
     - _SpecularTextureRotation: 0
     - _SpecularTextureTiling: 0
     - _SpecularTextureViewProjection: 0
-    - _Step: 0.1
+    - _Step: 0.2
     - _UseDissolve: 1
     - _UseEmissive: 0
     - _UseGradient: 1
