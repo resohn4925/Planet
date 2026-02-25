@@ -799,4 +799,26 @@ public class BuildingSystemOnSphere : MonoBehaviour
         
         return tangentDirection;
     }
+
+    private void OnApplicationQuit()
+    {
+        isEditing = false;
+    }
+
+    private void OnDestroy()
+    {
+        isEditing = false;
+        
+        _previousHintStates.Clear();
+        faceIndexs.Clear();
+        faceObjIndexs.Clear();
+    }
+
+    private void OnDisable()
+    {
+        if (isEditing)
+        {
+            isEditing = false;
+        }
+    }
 }
