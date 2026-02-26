@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class BuildingSystemOnSphere : MonoBehaviour
 {
@@ -313,13 +314,12 @@ public class BuildingSystemOnSphere : MonoBehaviour
         ClearAllModifiedHints();
         ModifyAllHintModules();
 
-        // 触发波纹效果
         if (isEffect)
         {
             TriggerRippleEffect();
         }
 
-        // 触发全量飞鸟效果更新
+        TriggerSplashEffect();
         TriggerAllBirdEffect();
     }
 
@@ -328,7 +328,6 @@ public class BuildingSystemOnSphere : MonoBehaviour
     /// </summary>
     private void IncrementalCreateModule()
     {
-        //pipeline中更新变形模块
         var pipelines = FindObjectsOfType<PlanetPipeline>();
         var targetPipeline = pipelines.FirstOrDefault(p => p.name == "PlanetPipeline");
         if (targetPipeline == null)
@@ -338,11 +337,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
         else { targetPipeline.GenerateObjIncremental(); }
         UpdateHintIncremental(faceIndexs);
 
-        // 触发波纹效果
         TriggerRippleEffect();
-        // 触发飞鸟VFX
         TriggerAllBirdEffect();
-        //TriggerBirdEffect(faceIndexs);
+        TriggerSplashEffect();
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -606,12 +603,26 @@ public class BuildingSystemOnSphere : MonoBehaviour
             rippleEffect = FindObjectOfType<RippleEffectURP>();
             if (rippleEffect == null)
             {
-                Debug.LogWarning("未找到RippleEffectURP组件，无法触发波纹效果");
                 return;
             }
         }
 
         rippleEffect.ActivateRipple(lastClickPosition);
+    }
+
+    private void TriggerSplashEffect()
+    {
+        if (vfxGenerator == null)
+        {
+            vfxGenerator = FindObjectOfType<VFXGenerator>();
+            if (vfxGenerator == null)
+            {
+                return;
+            }
+        }
+
+        Vector3 splashDirection = Vector3.up;
+        vfxGenerator.GenerateVFXWithIndex(lastClickPosition, splashDirection, -1, -1, -1, -1, VFXType.Splash);
     }
 
     private void TriggerBirdEffect(List<string> newActiveHints)
@@ -621,14 +632,12 @@ public class BuildingSystemOnSphere : MonoBehaviour
             vfxGenerator = FindObjectOfType<VFXGenerator>();
             if (vfxGenerator == null)
             {
-                Debug.LogWarning("未找到VFXGenerator组件");
                 return;
             }
         }
 
         if (marchingCube == null || marchingCube.marchingCubeDatas == null)
         {
-            Debug.LogWarning("marchingCube or marchingCubeDatas is null");
             return;
         }
 
@@ -698,7 +707,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                 Vector3 direction = CalculateTangentDirection(position);
 
                 vfxGenerator.DestroyVFXByIndex(faceIndex, x, z, y);
-                vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
+                vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y, VFXType.Bird);
                 previousBirdEffectStates[hintKey] = true;
             }
             catch (Exception ex)
@@ -767,7 +776,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
                                     Vector3 position = point.pos;
                                     Vector3 direction = CalculateTangentDirection(position);
-                                    vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y);
+                                    vfxGenerator.GenerateVFXWithIndex(position, direction, faceIndex, x, z, y, VFXType.Bird);
                                     
                                     // 增加该面的飞鸟计数
                                     birdCountPerFace++;
