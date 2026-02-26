@@ -7,7 +7,8 @@ using UnityEditor;
 
 public class VFXGenerator : MonoBehaviour
 {
-    public GameObject vfxPrefab;
+    public GameObject vfxPrefab_Bird;
+    public GameObject vfxPrefab_Splash;
     private Dictionary<string, GameObject> vfxInstances = new Dictionary<string, GameObject>();
     private GameObject vfxParent;
 
@@ -24,18 +25,39 @@ public class VFXGenerator : MonoBehaviour
         vfxInstances.Clear();
     }
 
-    public void GenerateVFXWithIndex(Vector3 position, Vector3 direction, int faceIndex, int x, int y, int z)
+    public void GenerateVFXWithIndex(Vector3 position, Vector3 direction, int faceIndex, int x, int y, int z, VFXType vfxType)
     {
         string key = GenerateKey(faceIndex, x, y, z);
-        
-        if (vfxPrefab != null)
+
+        GameObject vfx = null;
+
+        switch (vfxType)
         {
-            // Get or create VFX parent
+            case VFXType.Bird:
+                vfx = vfxPrefab_Bird;
+                break;
+            case VFXType.Splash:
+                vfx = vfxPrefab_Splash;
+                break;
+        }
+
+        if (vfx != null)
+        {
             GetVFXParent();
-            
-            GameObject vfxInstance = Instantiate(vfxPrefab, position, Quaternion.LookRotation(direction));
-            vfxInstance.transform.SetParent(vfxParent.transform);
-            vfxInstances[key] = vfxInstance;
+
+            switch (vfxType)
+            {
+                case VFXType.Bird:
+                    GameObject vfxInstance = Instantiate(vfxPrefab_Bird, position, Quaternion.LookRotation(direction));
+                    vfxInstance.transform.SetParent(vfxParent.transform);
+                    vfxInstances[key] = vfxInstance;
+                    break;
+                case VFXType.Splash:
+                    vfxInstance = Instantiate(vfxPrefab_Splash, position, Quaternion.LookRotation(direction));
+                    vfxInstance.transform.SetParent(vfxParent.transform);
+                    vfxInstances[key] = vfxInstance;
+                    break;
+            }
         }
     }
 
@@ -110,4 +132,56 @@ public class VFXGenerator : MonoBehaviour
             }
         }
     }
+
+    public void ClearVFXByType(VFXType vfxType)
+    {
+        List<string> keysToRemove = new List<string>();
+        
+        foreach (var kvp in vfxInstances)
+        {
+            if (kvp.Value != null)
+            {
+                if (IsVFXOfType(kvp.Value, vfxType))
+                {
+#if UNITY_EDITOR
+                    if (Application.isEditor && !Application.isPlaying)
+                    {
+                        DestroyImmediate(kvp.Value);
+                    }
+                    else
+#endif
+                    {
+                        Destroy(kvp.Value);
+                    }
+                    keysToRemove.Add(kvp.Key);
+                }
+            }
+        }
+
+        foreach (string key in keysToRemove)
+        {
+            vfxInstances.Remove(key);
+        }
+    }
+
+    private bool IsVFXOfType(GameObject vfxObject, VFXType vfxType)
+    {
+        string objectName = vfxObject.name.ToLower();
+        
+        switch (vfxType)
+        {
+            case VFXType.Bird:
+                return objectName.Contains("bird");
+            case VFXType.Splash:
+                return objectName.Contains("splash");
+            default:
+                return false;
+        }
+    }
+}
+
+public enum VFXType
+{
+    Bird,
+    Splash
 }
