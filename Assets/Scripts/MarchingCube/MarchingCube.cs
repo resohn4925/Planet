@@ -296,6 +296,11 @@ public class MarchingCube : MonoBehaviour
 
     public GameObject InitializeModule(MarchingCubeData marchingCubeData, int moduleIndex)
     {
+        if (marchingCubeData.modulePointDatas[moduleIndex].yIndex == 0)
+        {
+            return null;
+        }
+
         string originalModuleName = marchingCubeData.modulePointDatas[moduleIndex].moduleName;
 
         var mapping = m.GetModuleMapping(originalModuleName);
@@ -317,18 +322,35 @@ public class MarchingCube : MonoBehaviour
             return null;
         }
 
-        // 检查是否在变体模式下，如果modulePrefabsBasic为空，则动态创建模块
+        string targetModuleName = mappedName;
+        
+        if (marchingCubeData.modulePointDatas[moduleIndex].yIndex == 1)
+        {
+            string variantName = mappedName + "_B";
+            bool variantExists = false;
+            
+            if (modulePrefabsBasic != null && modulePrefabsBasic.Count > 0)
+            {
+                var variantModule = modulePrefabsBasic.Find(obj =>
+                    obj.name == variantName || obj.name == variantName + ".prefab");
+                
+                if (variantModule != null)
+                {
+                    variantExists = true;
+                    targetModuleName = variantName;
+                }
+            }
+        }
+
         GameObject mappedModule = null;
         if (modulePrefabsBasic == null || modulePrefabsBasic.Count == 0)
         {
-            // 变体模式：动态创建基础模块
-            mappedModule = CreateVariantModule(mappedName);
+            mappedModule = CreateVariantModule(targetModuleName);
         }
         else
         {
-            // 正常模式：从预加载的预制体中查找
             mappedModule = modulePrefabsBasic.Find(obj =>
-                obj.name == mappedName || obj.name == mappedName + ".prefab");
+                obj.name == targetModuleName || obj.name == targetModuleName + ".prefab");
         }
 
         if (mappedModule == null)
