@@ -281,7 +281,7 @@ Material:
     - _FlowDirection2: {r: 1, g: 1, b: 0, a: 0}
     - _FlowST1: {r: 5, g: 5, b: 0.02, a: 0.02}
     - _FlowST2: {r: 5, g: 2, b: -0.005, a: -0.01}
-    - _FoamColor: {r: 4.8820405, g: 7.3403726, b: 7.0860624, a: 1}
+    - _FoamColor: {r: 7.3499804, g: 9.7999735, b: 9.566641, a: 1}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _ReflectionColor: {r: 0.7704402, g: 0.908886, b: 1, a: 1}
     - _RotationMatrix: {r: 0.70710677, g: 0.70710677, b: -0.70710677, a: 0.70710677}
