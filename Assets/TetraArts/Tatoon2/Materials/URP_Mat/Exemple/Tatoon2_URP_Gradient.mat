@@ -28,7 +28,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3000
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -91,7 +91,7 @@ Material:
     - _ChangeAxis: 1
     - _Dissolve: 0.78
     - _EdgeSize: 0.005
-    - _EnvReflectIntensity: 1.2
+    - _EnvReflectIntensity: 1.4
     - _EnvironmentReflectIntensity: 0.1
     - _Feather: 0.01
     - _GradientPosition: 0
@@ -107,7 +107,7 @@ Material:
     - _OutlineNoise: 1
     - _OutlineNoiseScale: 0
     - _OutlineSize: 34.54
-    - _OutlineWidth: 0.05
+    - _OutlineWidth: 0.04
     - _RimBlend: 0
     - _RimLightColor: 1
     - _RimLightIntensity: 0.048
@@ -157,6 +157,6 @@ Material:
     - _EmissiveColor: {r: 4, g: 4, b: 4, a: 0}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 0}
     - _RimColor: {r: 0, g: 1, b: 0.8745098, a: 0}
-    - _ShadowColor: {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
+    - _ShadowColor: {r: 0.2264151, g: 0.2264151, b: 0.2264151, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 0}
   m_BuildTextureStacks: []
