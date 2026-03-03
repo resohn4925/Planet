@@ -9,6 +9,8 @@ public class VFXGenerator : MonoBehaviour
 {
     public GameObject vfxPrefab_Bird;
     public GameObject vfxPrefab_Splash;
+    public GameObject vfxPrefab_Splash_B;//一层objvfx
+
     private Dictionary<string, GameObject> vfxInstances = new Dictionary<string, GameObject>();
     private GameObject vfxParent;
 
@@ -37,7 +39,7 @@ public class VFXGenerator : MonoBehaviour
                 vfx = vfxPrefab_Bird;
                 break;
             case VFXType.Splash:
-                vfx = vfxPrefab_Splash;
+                vfx = y == 1 ? vfxPrefab_Splash_B : vfxPrefab_Splash;
                 break;
         }
 
@@ -53,7 +55,7 @@ public class VFXGenerator : MonoBehaviour
                     vfxInstances[key] = vfxInstance;
                     break;
                 case VFXType.Splash:
-                    vfxInstance = Instantiate(vfxPrefab_Splash, position, Quaternion.LookRotation(direction));
+                    vfxInstance = Instantiate(vfx, position, Quaternion.LookRotation(direction));
                     vfxInstance.transform.SetParent(vfxParent.transform);
                     vfxInstances[key] = vfxInstance;
                     break;

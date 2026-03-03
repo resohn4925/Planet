@@ -26,8 +26,9 @@ public class BuildingSystemOnSphere : MonoBehaviour
     private RippleEffectURP rippleEffect;
     // 存储上一次的hint激活状态，用于增量更新
     private Dictionary<string, bool> _previousHintStates = new Dictionary<string, bool>();
-    [HideInInspector]public List<string> faceIndexs = new();
+    [HideInInspector] public List<string> faceIndexs = new();
     [HideInInspector] public List<int> faceObjIndexs = new();
+    [HideInInspector] public int layer;
 
     //测试用变量
     //public GameObject testHintObj;
@@ -142,6 +143,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
                         if (isActive && (!_previousHintStates.ContainsKey(hintKey) || !_previousHintStates[hintKey]))
                         {
                             newActiveHints.Add(hintKey);
+                            layer = y;
                         }
                     }
                 }
@@ -319,7 +321,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
             TriggerRippleEffect();
         }
 
-        TriggerSplashEffect();
+        TriggerSplashEffect(layer);
         TriggerAllBirdEffect();
     }
 
@@ -339,7 +341,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
 
         TriggerRippleEffect();
         TriggerAllBirdEffect();
-        TriggerSplashEffect();
+        TriggerSplashEffect(layer);
     }
 
     private void OnMouseExitHitObj(GameObject exitedObj)
@@ -610,7 +612,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
         rippleEffect.ActivateRipple(lastClickPosition);
     }
 
-    private void TriggerSplashEffect()
+    private void TriggerSplashEffect(int layer)
     {
         if (vfxGenerator == null)
         {
@@ -622,7 +624,7 @@ public class BuildingSystemOnSphere : MonoBehaviour
         }
 
         Vector3 splashDirection = Vector3.up;
-        vfxGenerator.GenerateVFXWithIndex(lastClickPosition, splashDirection, -1, -1, -1, -1, VFXType.Splash);
+        vfxGenerator.GenerateVFXWithIndex(lastClickPosition, splashDirection, -1, -1, layer, -1, VFXType.Splash);
     }
 
     private void TriggerBirdEffect(List<string> newActiveHints)
